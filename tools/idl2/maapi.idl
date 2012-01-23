@@ -8685,8 +8685,38 @@ group NFCAPI "NFC API" {
 		} // end of Audio API constants
 
 		/**
-		* A multi sound audio API which allows applications to play
-		* Only available on Android and iOS
+		*
+		* The new audio API is only initially available on Android and iOS.
+		*
+		* Audio API which allows applications to play multiple sounds
+		* at the same time. It handles both sounds which is streamed from
+		* disc or over http, or smaller sounds which is prepared in memory.
+		*
+		* Due to platform limitations one streaming sound should only be
+		* played at any given time.
+		*
+		* @par Example
+		*
+		* Prepare a streaming sound for playback asyncronous.
+		* Create a MAAudioData with a URL, create an instance and then
+		* asyncroniously prepare the audio before playing.
+		* This example returns 1 on succeess and -1 on error.
+		* The prepare call will send an event EVENT_TYPE_AUDIO_PREPARED
+		* when it's ready, then you call maAudioPlay with that instance.
+		*
+		* \code
+		* int audio = maAudioDataCreateFromURL(NULL, <URL>, MA_AUDIO_DATA_STREAM);
+		* if(audio<0)
+		* 	return -1;
+		* int instance = maAudioInstanceCreate(audio);
+		* if(instance<0)
+		*	return -1;
+		* int result = maAudioPrepare(audio, 1);
+		* if(result<0)
+		*	return -1;
+		* return 1;
+		* \endcode
+		*
 		*/
 		group AudioAPIFunctions "Audio API Functions" {
 
@@ -8707,32 +8737,61 @@ group NFCAPI "NFC API" {
 
 			/**
 			* \brief Creates a MAAudioData from a URL
-			* The URL is being
+			* The URL is handled as a file path by default. If the path
+			* begins with "http://" or "https://" the system will stream
+			* the audio from that location.
+			* \param mime    The mime string for the resource. Can be NULL
+			* \param url     The URL to the audio file
+			* \param flags   MA_AUDIO_DATA_STREAM means that the audio should
+			*                be streamed and is for music playback.
+			*                Sound effects should have the flag set to 0.
+			* \return        A MAAudioInstance index >0
+			*                <0 on error
 			*/
 			MAAudioData maAudioDataCreateFromURL(in MAString mime, in MAString url, in int flags);
 
 			/**
-			*
+			* \brief Destroys the MAAudioData object and releases it's memory
+			* \param audioData The MAAudioData which should be destroyed.
+			* \return 	MA_AUDIO_ERR_OK on success
+			* 			MA_AUDIO_ERR_INVALID_DATA on failure
 			*/
 			int maAudioDataDestroy(in MAAudioData audioData);
 
 			/**
-			*
+			* \brief Creates a MAAudioInstance from a MAAudioData object
+			* \param  audioData The MAAudioData to use with this instance
+			* \return A MAAudioInstance index >0
+			*         <0 on error
 			*/
 			MAAudioInstance maAudioInstanceCreate(in MAAudioData audioData);
 
 			/**
-			*
+			* \brief Destroys a MAAudioInstance and releases it's memory
+			* \param audioInstance The instance which will be destroyed
+			* \return 	MA_AUDIO_ERR_OK on success
+			*			MA_AUDIO_ERR_INVALID_INSTANCE on failure
 			*/
 			int maAudioInstanceDestroy(in MAAudioInstance audioInstance);
 
 			/**
-			*
+			* \brief Returns the length of the MAAudioInstance
+			* On some platforms this will only work with streaming sounds.
+			* \param audio The MAAudioInstance
+			* \return 	MA_AUDIO_ERR_OK on success
+			* 			<0 on failure
 			*/
 			int maAudioGetLength(in MAAudioInstance audio);
 
 			/**
-			*
+			* \brief Sets the number of loops for this MAAudioInstance
+			* \param audio The audio instance
+			* \param loops  The number of loops
+			*				-1 = loop forever
+			*				0 = play once
+			*				>0 = number of loops
+			* \return 	MA_AUDIO_ERR_OK on success
+			*			<0 on failure
 			*/
 			int maAudioSetNumberOfLoops(in MAAudioInstance audio, in int loops);
 
@@ -8743,7 +8802,9 @@ group NFCAPI "NFC API" {
 			* If synchronous the call will block until finished
 			* and the audio instance will be ready directly.
 			* An EVENT_TYPE_AUDIO_PREPARED event will be triggered for the asynchronous prepare.
+			*
 			* Notes:
+			*
 			* Android: If a streaming audio is already playing and a new one is being prepared,
 			* the playing audio will stop.
 			*
@@ -8758,7 +8819,9 @@ group NFCAPI "NFC API" {
 			/**
 			* \brief Plays the current sound in the audio instance
 			* If the sound hasn't been prepared it will be prepared before playing.
+			*
 			* Notes:
+			*
 			* Android: If the audio hasn't been prepared it will be synchrounous prepared before playing,
 			* this means that there might be a delay before this call returns. Always make sure that your
 			* audio has been properly prepared before playing.
@@ -8768,17 +8831,17 @@ group NFCAPI "NFC API" {
 			int maAudioPlay(in MAAudioInstance audio);
 
 			/**
-			*
+			* \brief Sets the current position for this MAAudioInstance
 			*/
 			int maAudioSetPosition(in MAAudioInstance audio, in int milliseconds);
 
 			/**
-			*
+			* \brief Gets the current position for this MAAudioInstance
 			*/
 			int maAudioGetPosition(in MAAudioInstance audio);
 
 			/**
-			*
+			* \brief Sets the volume for this MAAudioInstance
 			*/
 			int maAudioSetVolume(in MAAudioInstance audio, in float volume);
 
@@ -8794,6 +8857,7 @@ group NFCAPI "NFC API" {
 			* be unloaded. In order to play the sound again the instance has to be prepared.
 			*/
 			int maAudioStop(in MAAudioInstance audio);
+
 		}// End of Audio API Functions
 	} // End of Audio API group
 

@@ -90,6 +90,10 @@ public class MoSyncAudio implements OnCompletionListener, OnPreparedListener, On
 	final static int AUDIO_PREPARED = 2;
 	final static int AUDIO_PREPARE_ERROR = 3;
 
+	/**
+	 * @brief AudioData
+	 *
+	 */
 	class AudioData
 	{
 		private String mFileName;
@@ -423,7 +427,7 @@ public class MoSyncAudio implements OnCompletionListener, OnPreparedListener, On
 		AudioData d = mAudioData.remove(audioData);
 
 		if(null == d)
-			return -100;
+			return MA_AUDIO_ERR_INVALID_DATA;
 
 		d.release(mAudioInstance);
 
