@@ -1,0 +1,48 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <meta name="viewport" content="width=320; user-scalable=no" />
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8">
+    <title>PhoneGap</title>
+      <link rel="stylesheet" href="master.css" type="text/css" media="screen" title="no title" charset="utf-8">
+      <script type="text/javascript" charset="utf-8" src="js/bridge.js"></script>
+      <script type="text/javascript" charset="utf-8" src="js/phonegap-sensormanager.js"></script>
+      <script type="text/javascript" charset="utf-8" src="js/phonegap-bridge.js"></script>
+      <script type="text/javascript" charset="utf-8" src="js/phonegap-1.2.0.js"></script>
+      <script type="text/javascript" charset="utf-8" src="audiotest-main.js"></script>
+
+  </head>
+  <body onload="init();" id="stage" class="theme">
+    <h1>Welcome to PhoneGap!</h1>
+    <h2>W3C Sensor Manager Test</h2>
+    <h2>this file is in Localfiles folder of MoSync Project</h2>
+    <div id="info">
+        <h4>Platform: <span id="platform"> &nbsp;</span>,   Version: <span id="version">&nbsp;</span></h4>
+        <h4>UUID: <span id="uuid"> &nbsp;</span>,   Name: <span id="name">&nbsp;</span></h4>
+        <h4>Width: <span id="width"> &nbsp;</span>,   Height: <span id="height">&nbsp;
+                   </span>, Color Depth: <span id="colorDepth"></span></h4>
+
+     </div>
+    <p id="Audio List"></p>
+    <dl = id="Audio-State">
+      <dt>State:</dt><dd id="audiostate">&nbsp;</dd>
+    </dl>
+    <a href="#" class="btn large" onclick="playMedia();">Play</a>
+
+    <a href="#" class="btn large" onclick="pauseMedia();">Pause</a>
+
+    <a href="#" class="btn large" onclick="stopMedia();">Stop</a>
+
+    <a href="#" class="btn large" onclick="releaseMedia();">Release</a>
+
+    <a href="#" class="btn large" onclick="getDuration();">Get duration</a>
+    <dl id="Current-duration">
+      <dt>Duration:</dt><dd id="currentduration">&nbsp;</dd>
+    </dl>
+
+    <a href="#" class="btn large" onclick="getPosition();">Get position</a>
+     <dl id="Current-position">
+      <dt>Position:</dt><dd id="currentposition">&nbsp;</dd>
+    </dl>
+  </body>
+</html>

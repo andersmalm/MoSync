@@ -34,6 +34,7 @@ MA 02110-1301, USA.
 #include "PhoneGapFile.h"
 #include "SensorManager.h"
 #include "PhoneGapCapture.h"
+//#include "WormholeAudio.h"
 
 // PhoneGap callback result codes.
 #define PHONEGAP_CALLBACK_STATUS_NO_RESULT "0"
@@ -49,6 +50,7 @@ MA 02110-1301, USA.
 
 // Forward declarations
 class PhoneGapNotificationManager;
+class WormholeAudio;
 
 /**
  * Class that implements JavaScript calls.
@@ -235,6 +237,12 @@ private:
 	 * PhoneGap Notification API's message handler.
 	 */
 	PhoneGapNotificationManager* mPhoneGapNotificationManager;
+
+	/**
+	 * Wormhole Audio API message handler.
+	 */
+	WormholeAudio* mWormholeAudioManager;
+
 };
 
 #endif

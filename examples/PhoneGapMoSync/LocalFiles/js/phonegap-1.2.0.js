@@ -3132,6 +3132,8 @@ var Media = function(src, successCallback, errorCallback, statusCallback, positi
     this.positionCallback = positionCallback;
     this._duration = -1;
     this._position = -1;
+
+    alert(src);
 };
 
 // Media messages

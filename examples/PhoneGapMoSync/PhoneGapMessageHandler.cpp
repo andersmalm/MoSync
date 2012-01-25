@@ -31,6 +31,8 @@ MA 02110-1301, USA.
 #include "PushNotification/PhoneGapNotificationManager.h"
 #include "maapi.h"
 
+#include "WormholeAudio.h"
+
 // NameSpaces we want to access.
 using namespace MAUtil; // Class Moblet, String
 using namespace NativeUI; // WebView widget
@@ -49,6 +51,7 @@ PhoneGapMessageHandler::PhoneGapMessageHandler(NativeUI::WebView* webView) :
 {
 	enableHardware();
 	mPhoneGapNotificationManager = new PhoneGapNotificationManager(this);
+	mWormholeAudioManager = new WormholeAudio(this);
 
 	for(int i = 0; i < MAXIMUM_SENSORS; i++)
 	{
@@ -135,8 +138,13 @@ bool PhoneGapMessageHandler::handleMessage(PhoneGapMessage& message)
 	{
 		mPhoneGapCapture.handleMessage(message);
 	}
+	else if (message.getParam("service") == "Media")
+	{
+		mWormholeAudioManager->handleMessage(message);
+	}
 	else
 	{
+		printf("unhandled message : %s\n", message.getParam("service").c_str());
 		// Message was not handled.
 		return false;
 	}
@@ -293,6 +301,12 @@ void PhoneGapMessageHandler::customEvent(const MAEvent& event)
 		//let the PhoneGap side know that it should resume
 		mWebView->callJS("PhoneGapCommandResult('resume');");
 	}
+
+	else if (event.type == EVENT_TYPE_AUDIO_PREPARED ||
+			event.type == EVENT_TYPE_AUDIO_COMPLETED)
+	{
+		mWormholeAudioManager->handleAudioEvents(event);
+	}
 }
 
 /**
@@ -428,6 +442,7 @@ void PhoneGapMessageHandler::callCallback(
  */
 void PhoneGapMessageHandler::callJS(const String& script)
 {
+	printf("**** callJS : %s\n", script.c_str());
 	mWebView->callJS(script);
 }
 
