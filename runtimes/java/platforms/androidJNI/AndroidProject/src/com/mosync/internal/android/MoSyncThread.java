@@ -212,7 +212,7 @@ public class MoSyncThread extends Thread
 	 * true if the MoSync program is considered to be dead,
 	 * used for maPanic.
 	 */
-	volatile private boolean mHasDied;
+	volatile private boolean mHasDied = false;
 
 	/**
 	 * a handle used for full screen camera preview
@@ -289,7 +289,8 @@ public class MoSyncThread extends Thread
 
 	int mTextConsoleHeight;
 
-	private volatile boolean mIsSleeping;
+	private volatile boolean mIsSleeping = false;
+	private volatile boolean mIsEventPosted = false;
 
 	/**
 	 * Ascent of text in the default console font.
@@ -336,10 +337,6 @@ public class MoSyncThread extends Thread
 		sMoSyncThread = this;
 
 		MoSyncError.getSingletonObject().setThread(this);
-
-		mHasDied = false;
-
-		mIsSleeping = false;
 
 		mMoSyncNetwork = new MoSyncNetwork(this);
 		mMoSyncSound = new MoSyncSound(this);
@@ -957,6 +954,9 @@ public class MoSyncThread extends Thread
 			// Add event to queue.
 			nativePostEvent(event);
 			// Wake up thread if sleeping.
+
+			mIsEventPosted = true;
+
 			if(mIsSleeping)
 			{
 				interrupt();
@@ -2445,7 +2445,17 @@ public class MoSyncThread extends Thread
 	{
 		SYSLOG("maWait");
 
-		mIsSleeping = true;
+		synchronized(mPostEventMonitor)
+		{
+			if(mIsEventPosted)
+			{
+				mIsEventPosted = false;
+				return;
+			}
+
+			mIsSleeping = true;
+		}
+
 		try
 		{
 	 		if (timeout<=0)
@@ -2467,7 +2477,10 @@ public class MoSyncThread extends Thread
 			logError("Thread sleep failed : " + e.toString(), e);
 		}
 
-		mIsSleeping = false;
+		synchronized(mPostEventMonitor)
+		{
+			mIsSleeping = false;
+		}
 
 		SYSLOG("maWait returned");
 	}

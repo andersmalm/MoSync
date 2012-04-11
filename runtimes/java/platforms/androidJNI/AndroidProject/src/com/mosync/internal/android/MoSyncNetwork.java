@@ -1128,8 +1128,8 @@ public class MoSyncNetwork
 			mUrlConnection = new URL(url).openConnection();
 
 			mUrlConnection.setAllowUserInteraction(true);
-			mUrlConnection.setDoInput(true);
-			mUrlConnection.setDoOutput(true);
+			//mUrlConnection.setDoInput(true);
+			//mUrlConnection.setDoOutput(true);
 			mUrlConnection.setUseCaches(false);
 
 			return this;
@@ -1146,8 +1146,8 @@ public class MoSyncNetwork
 			mUrlConnection = new URL(url).openConnection();
 
 			mUrlConnection.setAllowUserInteraction(true);
-			mUrlConnection.setDoInput(true);
-			mUrlConnection.setDoOutput(true);
+			//mUrlConnection.setDoInput(true);
+			//mUrlConnection.setDoOutput(true);
 			mUrlConnection.setUseCaches(false);
 
 			HttpURLConnection httpConnection =
