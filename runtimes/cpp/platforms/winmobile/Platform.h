@@ -31,4 +31,6 @@ namespace Core {
 extern Core::VMCore* gCore;
 extern bool gRunning;
 
+typedef unsigned long long uint64_t;
+
 #endif

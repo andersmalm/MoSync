@@ -255,6 +255,13 @@ elsif(mode == 'ccore')
 			i += 1
 		end
 		file.puts
+		file.puts "#define OPCODE_COUNT #{OPCODES.size}"
+		file.puts
+		file.puts "#define INSTRUCTIONS(m)\\"
+		OPCODES.each do |op|
+			file.puts "\tm(#{op.name.to_s.upcase})\\"
+		end
+		file.puts
 		file.puts 'enum {'
 		REGISTERS.each do |r|
 			file.puts "\tREG_#{r},"

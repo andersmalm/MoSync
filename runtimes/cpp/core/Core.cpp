@@ -119,7 +119,16 @@ __inline void chrashTestDummy(const char* fmt, ...) {
 #endif
 
 #include "gen-opcodes.h"
+
+#ifdef EMULATOR
+#define HAVE_ELF 1
+#else
+#define HAVE_ELF 0
+#endif
+
+#if HAVE_ELF
 #include <elf.h>
+#endif
 
 namespace Core {
 
@@ -315,8 +324,6 @@ public:
 		//LOG("logStateChange ends\n");
 	}
 #endif
-
-#define _DBG_OP _ENDOP
 
 	uint IP;
 	byte* rIP;
@@ -756,6 +763,7 @@ public:
 #endif
 	}
 
+#if HAVE_ELF
 	int LoadElfVM(Stream& file) {
 		Elf32_Ehdr ehdr;
 
@@ -972,6 +980,7 @@ public:
 		rIP = mem_cs + IP;
 		return 1;
 	}
+#endif
 
 	//****************************************
 	//Loader
@@ -982,10 +991,12 @@ public:
 
 		TEST(file.isOpen());
 		TEST(file.readObject(Head));	// Load header
+#if HAVE_ELF
 		if(Head.Magic == 0x464c457f) {	//ELF.
 			TEST(file.seek(Seek::Start, 0));
 			return LoadElfVM(file);
 		}
+#endif
 		if(Head.Magic != MA_HEAD_MAGIC) {
 			LOG("Magic error: 0x%08x should be 0x%x\n", Head.Magic, MA_HEAD_MAGIC);
 			FAIL;

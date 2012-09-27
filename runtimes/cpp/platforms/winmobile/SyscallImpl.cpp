@@ -3085,7 +3085,7 @@ void MoSyncErrorExit(int errorCode)
 		if(gRunning) {
 			char appCode[5];
 			for(int i=0; i<4; i++) {
-				appCode[i] = (byte)(gCore->Head.AppCode >> ((3-i)*8));
+				appCode[i] = (byte)(gCore->Head.BuildID >> ((3-i)*8));
 			}
 			appCode[4] = 0;
 			sprintf(ptr, "%s", appCode);

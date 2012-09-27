@@ -56,7 +56,7 @@ int mAshmemEntryPoint = -1;
 //#define LOGC(x, ...)
 //#define LOG(x, ...)
 
-#define SETUP_DEFAULT_VISITOR_ELEM(inst) defaultVisitors[_##inst] = &ArmRecompiler::visit_##inst;
+#define SETUP_DEFAULT_VISITOR_ELEM(inst) defaultVisitors[OP_##inst] = &ArmRecompiler::visit_##inst;
 
 #define ARM_PC (assm.mInstructionCount)
 #define ARM_PC_TO_ADDR(PC) ((int)assm.mipStart+PC*sizeof(AA::MDInstruction))
@@ -84,9 +84,9 @@ int mAshmemEntryPoint = -1;
 #define CALL_IMM_ARM(imm32)\
 {\
 	int returnAddr = (mInstructions[0].ip+mInstructions[0].length);\
-	AA::Register saveReg = getSaveRegister(REG_rt, AA::R1);\
+	AA::Register saveReg = getSaveRegister(REG_ra, AA::R1);\
 	assm.MOV_imm32(saveReg, returnAddr);\
-	saveRegister(REG_rt, saveReg);\
+	saveRegister(REG_ra, saveReg);\
 	assm.SET_CONDITION_CODE(AA::AL);\
 	JUMP_GEN(imm32);\
 }
@@ -604,14 +604,14 @@ namespace MoSync {
 		saveRegister(REG_sp, saveReg);
 	}
 
-	void ArmRecompiler::visit_CALL() {
+	void ArmRecompiler::visit_CALLR() {
 		LOGC("CALLR\n");
 		byte rd = I.rd;
 
-		int returnAddr = R.ip + mInstructions[0].length;
-		AA::Register saveReg = getSaveRegister(REG_rt, AA::R1);
+		int returnAddr = I.ip + I.length;
+		AA::Register saveReg = getSaveRegister(REG_ra, AA::R1);
 		assm.MOV_imm32(saveReg, returnAddr);
-		saveRegister(REG_rt, saveReg);
+		saveRegister(REG_ra, saveReg);
 
 		AA::Register reg = loadRegister(rd, AA::R1);
 		assm.MOV_imm32(AA::R2, mEnvironment.codeMask, true);
@@ -907,7 +907,7 @@ namespace MoSync {
 		LOGC("RET\n");
 
 		assm.MOV_imm32(AA::R2, mEnvironment.codeMask);
-		assm.AND(AA::R1, loadRegister(REG_rt, AA::R3), AA::R2);
+		assm.AND(AA::R1, loadRegister(REG_ra, AA::R3), AA::R2);
 
 		//assm.MOV_imm32(AA::R0, (int)mPipeToArmInstMap); // r0 = pipeToArmInstMap
 
@@ -1147,6 +1147,84 @@ namespace MoSync {
 		SET_PC(AA::R1, AA::R2);
 	}
 
+	void ArmRecompiler::visit_NOP() {
+	}
+
+	void ArmRecompiler::visit_BREAK() {
+		DEBIG_PHAT_ERROR;
+	}
+
+	void ArmRecompiler::visit_LDDR() {
+		LOGC("LDDR\n");
+		byte rd = I.rd;
+		byte rs = I.rs;
+		AA::Register saveReg = getSaveRegister(rd, AA::R0);
+		AA::Register reg = loadRegister(rs, saveReg);
+		saveRegister(rd, reg);
+		saveReg = getSaveRegister(rd+1, AA::R0);
+		reg = loadRegister(rs+1, saveReg);
+		saveRegister(rd, reg);
+	}
+
+	void ArmRecompiler::visit_LDDI() {
+		LOGC("LDDI\n");
+		byte rd = I.rd;
+		AA::Register saveReg = getSaveRegister(rd, AA::R1);
+		assm.MOV_imm32(saveReg, I.imm);
+		saveRegister(rd, saveReg);
+		saveReg = getSaveRegister(rd+1, AA::R1);
+		assm.MOV_imm32(saveReg, I.imm2);
+		saveRegister(rd, saveReg);
+	}
+
+	void ArmRecompiler::visit_FLOATS() {
+		AA::DoubleReg sr = getDoubleSaveReg(I.rd);
+		AA::FloatReg temp = getFloatTempReg();
+		assm.FSMR(temp, loadRegister(I.rs));
+		assm.FSITOD(sr, temp);
+	}
+
+	void ArmRecompiler::visit_FLOATUNS() {
+		AA::DoubleReg sr = getDoubleSaveReg(I.rd);
+		AA::FloatReg temp = getFloatTempReg();
+		assm.FSMR(temp, loadRegister(I.rs));
+		assm.FUITOD(sr, temp);
+	}
+
+	void ArmRecompiler::floatd(int frd, int rs) {
+		int64_t ll = mEnvironment.regs[rs];
+		ll <<= 32;
+		ll |= mEnvironment.regs[rs+1];
+		mEnvironment.floatRegs[frd] = (double)ll;
+	}
+
+	void ArmRecompiler::floatund(int frd, int rs) {
+		uint64_t ll = mEnvironment.regs[rs];
+		ll <<= 32;
+		ll |= mEnvironment.regs[rs+1];
+		mEnvironment.floatRegs[frd] = (double)ll;
+	}
+
+	void ArmRecompiler::visit_FLOATD() {
+		emitTwoArgFuncCall(&ArmRecompiler::floatd, I.rd, I.rs);
+	}
+
+	void ArmRecompiler::visit_FLOATUND() {
+		emitTwoArgFuncCall(&ArmRecompiler::floatund, I.rd, I.rs);
+	}
+
+	void ArmRecompiler::visit_FSTRS() {
+		AA::Register sr = getSaveRegister(I.rd);
+		AA::FloatReg temp = getFloatTempReg();
+		FCVTSD(temp, loadDoubleRegister(I.rs));
+		FMRS(sr, temp);
+		saveRegister(I.rd, sr);
+	}
+	void ArmRecompiler::visit_FSTRD() {
+		AA::Register sr = getSaveRegister(I.rd);
+	}
+	OPC(FSTRD) FETCH_RD_RS WRITE_REG(rd, FRS.i[0]); WRITE_REG(rd+1, FRS.i[1]); EOP;
+
 	ArmRecompiler::ArmRecompiler() :
 		Recompiler<ArmRecompiler>(2) {
 		mPipeToArmInstMap = NULL;
@@ -1174,17 +1252,17 @@ namespace MoSync {
 			byte op = inst.op;
 			int imm32 = inst.imm;
 
-			if(op==_JC_EQ ||
-			   op==_JC_NE ||
-			   op==_JC_GE ||
-				op==_JC_GT ||
-				op==_JC_LE ||
-				op==_JC_LT ||
-				op==_JC_LTU ||
-				op==_JC_GEU ||
-				op==_JC_GTU ||
-				op==_JC_LEU ||
-				op==_JPI) {
+			if(op==OP_JC_EQ ||
+			   op==OP_JC_NE ||
+			   op==OP_JC_GE ||
+				op==OP_JC_GT ||
+				op==OP_JC_LE ||
+				op==OP_JC_LT ||
+				op==OP_JC_LTU ||
+				op==OP_JC_GEU ||
+				op==OP_JC_GTU ||
+				op==OP_JC_LEU ||
+				op==OP_JPI) {
 				int len = imm32 - (int)(lastIp-mEnvironment.mem_cs);
 				if(len<0) {
 					int i = imm32;
@@ -1201,11 +1279,11 @@ namespace MoSync {
 			loopWeight = 1+loopWeight*loopWeight;
 			//const byte *lastIp = ip;
 
-			inst.rd = _ENDOP; inst.rs = _ENDOP;
+			inst.rd = -1; inst.rs = -1;
 			ip += decodeInstruction(ip, inst);
 
-			if(inst.rd != _ENDOP) mRegisterCount[inst.rd]+=loopWeight;
-			if(inst.rs != _ENDOP) mRegisterCount[inst.rs]+=loopWeight;
+			if(inst.rd != -1) mRegisterCount[inst.rd]+=loopWeight;
+			if(inst.rs != -1) mRegisterCount[inst.rs]+=loopWeight;
 
 		} while(ip!=endip);
 
@@ -1420,26 +1498,26 @@ static void MyExceptionHandlerL(TExcType aType)
 		AA::MDInstruction[mEnvironment.codeSize];
 
 		byte shifts[] = {
-			_SLLI,
-			_SRAI,
-			_SRLI
+			OP_SLLI,
+			OP_SRAI,
+			OP_SRLI
 		};
 
 		byte arithmetics[] = {
-			_SLL,
-			_SRA,
-			_SRL,
-			_AND,
-			_OR,
-			_XOR,
-			_ADD,
-			_MUL,
-			_SUB,
-			_LDR
+			OP_SLL,
+			OP_SRA,
+			OP_SRL,
+			OP_AND,
+			OP_OR,
+			OP_XOR,
+			OP_ADD,
+			OP_MUL,
+			OP_SUB,
+			OP_LDR
 		};
 
 		byte pattern[3];
-		pattern[2] = _NUL;
+		pattern[2] = OP_NOP;
 		for(unsigned int i = 0; i < sizeof(shifts); i++) {
 			pattern[0] = shifts[i];
 			for(unsigned int j = 0; j < sizeof(arithmetics); j++) {

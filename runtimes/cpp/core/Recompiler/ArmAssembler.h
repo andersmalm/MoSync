@@ -234,6 +234,10 @@ namespace avmplus
 		void MVN_imm8(Register dst, int imm8) ;
 		//-----
 
+		//---- added by mobile sorcery (fredrik)
+		void FMSR(FloatReg dst, Register src);
+		void FSITOD(DoubleReg dst, FloatReg src);
+		//-----
 
 		// Cheeseball way of doing imm32.
 		void MOV_imm32(Register dst, int imm32, bool optimize=true);

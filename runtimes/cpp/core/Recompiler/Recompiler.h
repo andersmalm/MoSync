@@ -23,7 +23,6 @@ Software Foundation, 59 Temple Place - Suite 330, Boston, MA
 #ifdef USE_ARM_RECOMPILER
 
 #include <Core.h>
-#include "Recompiler.h"
 #include "disassembler.h"
 
 /*
@@ -92,7 +91,7 @@ namespace MoSync {
 			int depth;
 			Matcher matcher;
 			Visitor visitor;
-			InstructionPatternNode *children[Core::_ENDOP];
+			InstructionPatternNode *children[OPCODE_COUNT];
 			InstructionPatternNode *parent;
 		};
 
@@ -107,11 +106,11 @@ namespace MoSync {
 		void setPattern(Matcher m, Visitor v, byte *sequence) {
 			int length = 0;
 			InstructionPatternNode *node = &mPatternNodeRoot;
-			if(*sequence == Core::_NUL) {
+			if(*sequence == OP_NOP) {
 				// error
 			}
 
-			while(*sequence != Core::_NUL) {
+			while(*sequence != OP_NOP) {
 				node = node->children[*sequence] = new InstructionPatternNode(node, length+1);
 				sequence++;
 				length++;
@@ -161,8 +160,6 @@ namespace MoSync {
 			mEnvironment.mem_ds = core->mem_ds;
 			mEnvironment.dataSize = core->Head.DataLen;
 			mEnvironment.dataMask = core->DATA_SEGMENT_SIZE-1;
-			mEnvironment.mem_cp = core->mem_cp;
-			mEnvironment.constantPoolSize = core->Head.IntLen*4;
 			mEnvironment.regs = core->regs;
 		}
 
@@ -232,7 +229,7 @@ namespace MoSync {
 				ip+=decodeInstruction(&mEnvironment.mem_cs[ip], inst);
 
 				switch(inst.op) {
-					case Core::_RET :
+					case OP_RET :
 					{
 endOfFunction:
 						int ipOfInstruction = ip-inst.length;
@@ -246,13 +243,12 @@ endOfFunction:
 						}
 					}
 					break;
-					case Core::_CASE:
+					case OP_CASE:
 					{
-						inst.imm<<=2;
-						//uint CaseStart = RECOMP_MEM(int, inst.imm, READ);
-						uint CaseLength = RECOMP_MEM(int, inst.imm + 1*sizeof(int), READ);
-						int tableAddress = inst.imm + 3*sizeof(int);
-						int defaultCaseAddress = RECOMP_MEM(int, inst.imm + 2*sizeof(int), READ);
+						uint32 CaseStart = inst.imm;
+						uint CaseLength = inst.imm2;
+						uint tableAddress = inst.imm3;
+						int defaultLabel = inst.imm4;
 
 						int maxJump = -1;
 						for(size_t i = 0; i < CaseLength; i++) {
@@ -260,30 +256,30 @@ endOfFunction:
 							if(j > maxJump) j = maxJump;
 							f->addLabel(j);
 						}
-						f->addLabel(defaultCaseAddress);
-						if(defaultCaseAddress>maxJump) maxJump=defaultCaseAddress;
+						f->addLabel(defaultLabel);
+						if(defaultLabel>maxJump) maxJump=defaultLabel;
 
 						if(maxJump<ip) {
 							goto endOfFunction;
 						}
 					}
 					break;
-					case Core::_JPI:
+					case OP_JPI:
 					if(inst.imm<ip) {
 						f->addLabel(inst.imm);
 						goto endOfFunction;
 					}
 
-					case Core::_JC_EQ:
-					case Core::_JC_NE:
-					case Core::_JC_GE:
-					case Core::_JC_GEU:
-					case Core::_JC_GT:
-					case Core::_JC_GTU:
-					case Core::_JC_LE:
-					case Core::_JC_LEU:
-					case Core::_JC_LT:
-					case Core::_JC_LTU:
+					case OP_JC_EQ:
+					case OP_JC_NE:
+					case OP_JC_GE:
+					case OP_JC_GEU:
+					case OP_JC_GT:
+					case OP_JC_GTU:
+					case OP_JC_LE:
+					case OP_JC_LEU:
+					case OP_JC_LT:
+					case OP_JC_LTU:
 						f->addLabel(inst.imm);
 					break;
 					default: break;
@@ -389,7 +385,8 @@ endOfFunction:
 //		int Recompiler::decodeInstruction(const byte *ip, Instruction& inst) {
 			inst.ip = (int)(ip-mEnvironment.mem_cs);
 			inst.length = disassemble_one(ip, mEnvironment.mem_cs, mEnvironment.mem_cp,
-				(char*)NULL, inst.op, inst.op2, inst.rd, inst.rs, inst.imm);
+				(char*)NULL, inst.op, inst.rd, inst.rs, inst.imm,
+				inst.imm2, inst.imm3, inst.imm4);
 			return inst.length;
 		}
 
@@ -405,7 +402,7 @@ endOfFunction:
 		int mNumPasses;
 		int mPass;
 
-		Visitor defaultVisitors[Core::_ENDOP];
+		Visitor defaultVisitors[OPCODE_COUNT];
 
 		bool mStopped;
 

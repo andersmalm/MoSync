@@ -2,9 +2,6 @@
 #define FETCH_INT	FETCH_IMM32
 
 #define FETCH_IMM8	imm32 = IB; LOGC(" n%i", imm32);
-#define FETCH_IMM16	imm32 = IB << 8; imm32 += IB; LOGC(" m%i(0x%x)", imm32, imm32);
-#define FETCH_IMM24	imm32 = IB << 16; imm32 += IB << 8; imm32 += IB;\
-	LOGC(" i%i(0x%x)", imm32, imm32);
 // little endian
 #define FETCH_IMM32	imm32 = IB; imm32 += IB << 8; imm32 += IB << 16;\
 	imm32 += IB << 24; LOGC(" n%i(0x%x)", imm32, imm32);
@@ -12,8 +9,6 @@
 #define FETCH_RD_RS		FETCH_RD FETCH_RS
 #define FETCH_RD_CONST		FETCH_RD FETCH_CONST
 #define FETCH_RD_RS_CONST	FETCH_RD FETCH_RS FETCH_CONST
-#define FETCH_RD_RS_ADDR16	FETCH_RD FETCH_RS FETCH_IMM16
-#define FETCH_RD_RS_ADDR24	FETCH_RD FETCH_RS FETCH_IMM24
 #define FETCH_RD_IMM8		FETCH_RD FETCH_IMM8
 
 #define FETCH_FRD_RS		FETCH_FRD FETCH_RS

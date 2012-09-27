@@ -30,8 +30,8 @@ void countInstructionUse(const char* opName, byte x) {
 }
 
 void initInstructionUseCount() {
-	gInstructionUseCount.resize(_ENDOP);
-	for(int i = 0; i < _ENDOP; i++) {
+	gInstructionUseCount.resize(OPCODE_COUNT);
+	for(int i = 0; i < OPCODE_COUNT; i++) {
 		gInstructionUseCount[i].id = i;
 		gInstructionUseCount[i].count = 0;
 		gInstructionUseCount[i].opName = "UNUSED";
@@ -50,7 +50,7 @@ void logInstructionUse() {
 
 	char temp[1024];
 	Base::WriteFileStream use("instruction_use.txt", false);
-	for(int i = 0; i < _ENDOP; i++) {
+	for(int i = 0; i < OPCODE_COUNT; i++) {
 		int len = sprintf(temp, "inst %s: %d\n", gInstructionUseCount[i].opName, gInstructionUseCount[i].count);
 		use.write(temp, len);
 	}

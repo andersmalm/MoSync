@@ -43,7 +43,6 @@ int disassemble_one ( const byte* ip,
  * @param buff    [in] Pointer to char buffer which can hold one
  *                     dissassembled instruction.
  * @param op      [out] Opcode
- * @param op2     [out] Second opcode, incase op was a prefix opcode
  * @param rd      [out] Destination register
  * @param rs      [out] Source register
  * @param imm32   [out] Immediate
@@ -55,9 +54,12 @@ int disassemble_one ( const byte* ip,
                       const int* mem_cp, 
                       char* buf, 
                       byte& op, 
-                      byte& op2, 
                       byte &rd, 
                       byte &rs, 
-                      int &imm32 );
+                      int &imm32,
+                      int &imm2,
+                      int &imm3,
+                      int &imm4
+											);
 
 #endif	//DISASSEMBLER_H
