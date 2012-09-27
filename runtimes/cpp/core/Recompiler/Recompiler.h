@@ -47,7 +47,9 @@ namespace MoSync {
 		byte length; // instruction length in bytes
 		int imm; // immediate value
 		int imm2; // second immediate value (for 64-bit instructions)
-		int immx[4];	// extra immediate values (for CASE)
+		// extra immediate values (for CASE)
+		int imm3;
+		int imm4;
 
 		int ip; // address of the instruction
 	};

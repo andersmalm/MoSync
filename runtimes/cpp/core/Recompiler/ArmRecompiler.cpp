@@ -1108,12 +1108,12 @@ namespace MoSync {
 
 	void ArmRecompiler::visit_CASE() {
 		LOGC("CASE\n");
-		byte rd = mInstructions[0].rd;
-		uint32 imm32 = mInstructions[0].imm;
+		byte rd = I.rd;
+		uint32 CaseStart = I.imm;
+		uint CaseLength = I.imm2;
+		uint tableAddress = I.imm3;
+		uint defaultLabel = I.imm4;
 
-		imm32 <<= 2;
-		uint CaseStart = RECOMP_MEM(int, imm32, READ);
-		uint CaseLength = RECOMP_MEM(int, imm32 + 1*sizeof(int), READ);
 		assm.MOV_imm32(AA::R0, CaseStart);
 		assm.MOV_imm32(AA::R1, CaseLength);
 		assm.SUB(AA::R2, loadRegister(rd, AA::R2), AA::R0); // index
@@ -1123,7 +1123,7 @@ namespace MoSync {
 		int label = ARM_PC;
 		assm.B(0);
 
-		assm.MOV_imm32(AA::R1, (int)((byte*)mEnvironment.mem_ds) + imm32);
+		assm.MOV_imm32(AA::R1, tableAddress);
 
 		assm.ADD_imm8(AA::R2, AA::R2, 3);
 		assm.LSL_i(AA::R2, AA::R2, 2); // *sizeof(int)
@@ -1142,38 +1142,9 @@ namespace MoSync {
 			assm.SET_CONDITION_CODE(AA::AL);
 		}
 
-		assm.MOV_imm32(AA::R1, RECOMP_MEM(int, imm32 + 2*sizeof(int), READ));
+		assm.MOV_imm32(AA::R1, defaultLabel);
 
 		SET_PC(AA::R1, AA::R2);
-	}
-
-	void ArmRecompiler::visit_FAR() {
-		LOGC("FAR\n");
-		int op = mInstructions[0].op2;
-		byte rd = mInstructions[0].rd;
-		byte rs = mInstructions[0].rs;
-		int imm32 = mInstructions[0].imm;
-
-		switch(op) {
-			case _CALLI: CALL_IMM_ARM(imm32) break;
-
-			case _JC_EQ: 	JUMP_IMM16(rd, rs, imm32, AA::EQ); break;
-			case _JC_NE:	JUMP_IMM16(rd, rs, imm32, AA::NE); break;
-			case _JC_GE:	JUMP_IMM16(rd, rs, imm32, AA::GE); break;
-			case _JC_GT:	JUMP_IMM16(rd, rs, imm32, AA::GT); break;
-			case _JC_LE:	JUMP_IMM16(rd, rs, imm32, AA::LE); break;
-			case _JC_LT:	JUMP_IMM16(rd, rs, imm32, AA::LT); break;
-			case _JC_LTU:	JUMP_IMM16(rd, rs, imm32, AA::CC); break;
-			case _JC_GEU:	JUMP_IMM16(rd, rs, imm32, AA::CS) break;
-			case _JC_GTU:	JUMP_IMM16(rd, rs, imm32, AA::HI); break;
-			case _JC_LEU:	JUMP_IMM16(rd, rs, imm32, AA::LS); break;
-
-			case _JPI:
-			{
-				JUMP_GEN(imm32);
-			}
-			break;
-		}
 	}
 
 	ArmRecompiler::ArmRecompiler() :
@@ -1184,9 +1155,9 @@ namespace MoSync {
 	}
 
 	void ArmRecompiler::analyze() {
-		int mRegisterCount[128];
+		int mRegisterCount[32];
 
-		memset(mRegisterCount, 0, 128*sizeof(int));
+		memset(mRegisterCount, 0, sizeof(mRegisterCount));
 
 		byte *loopWeights = new byte[mEnvironment.codeSize];
 		memset(loopWeights, 0, mEnvironment.codeSize);
@@ -1198,15 +1169,10 @@ namespace MoSync {
 		do {
 			const byte *lastIp = ip;
 
-			inst.op2=_ENDOP;
 			ip += decodeInstruction(ip, inst);
 
 			byte op = inst.op;
-			if(inst.op2!=_ENDOP) op = inst.op2;
 			int imm32 = inst.imm;
-			//int rd = inst.rd,
-				//rs = inst.rs;
-
 
 			if(op==_JC_EQ ||
 			   op==_JC_NE ||
