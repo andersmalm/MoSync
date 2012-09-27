@@ -26,108 +26,6 @@ Software Foundation, 59 Temple Place - Suite 330, Boston, MA
 typedef unsigned char byte;
 typedef unsigned int uint;
 
-//****************************************
-//		 Instruction descripters
-//****************************************
-enum
-{
-	_NUL = 0,
-	_PUSH,
-	_POP,
-	_CALL,
-	_CALLI,
-	_LDB,
-	_STB,
-	_LDH,
-	_STH,
-	_LDW,
-	_STW,
-	_LDI,
-	_LDR,
-	_ADD,
-	_ADDI,
-	_MUL,
-	_MULI,
-	_SUB,
-	_SUBI,
-	_AND,
-	_ANDI,
-	_OR,
-	_ORI,
-	_XOR,
-	_XORI,
-	_DIVU,
-	_DIVUI,
-	_DIV,
-	_DIVI,
-	_SLL,
-	_SLLI,
-	_SRA,
-	_SRAI,
-	_SRL,
-	_SRLI,
-	_NOT,
-	_NEG,
-	_RET,	
-	_JC_EQ,
-	_JC_NE,
-	_JC_GE,
-	_JC_GEU,
-	_JC_GT,
-	_JC_GTU,
-	_JC_LE,
-	_JC_LEU,
-	_JC_LT,
-	_JC_LTU,
-	_JPI,
-	_JPR,
-	_XB,
-	_XH,
-	_SYSCALL,
-	_CASE,
-	_FAR,
-	_ENDOP
-};
-
-enum
-{
-	REG_zero,
-	REG_sp,
-	REG_rt,
-	REG_fr,
-	REG_d0,
-	REG_d1,
-	REG_d2,
-	REG_d3,
-	REG_d4,
-	REG_d5,
-	REG_d6,
-	REG_d7,
-	REG_i0,
-	REG_i1,
-	REG_i2,
-	REG_i3,
-
-	REG_r0,
-	REG_r1,
-	REG_r2,
-	REG_r3,
-	REG_r4,
-	REG_r5,
-	REG_r6,
-	REG_r7,
-	REG_r8,
-	REG_r9,
-	REG_r10,
-	REG_r11,
-	REG_r12,
-	REG_r13,
-	REG_r14,
-	REG_r15
-};
-
-#define _DBG_OP _ENDOP
-
 #ifdef __SYMBIAN32__
 #define WRITE(argv...) if(buf) buf += write(buf, argv)
 __inline int write(char* buf, const char* fmt, ...) {
@@ -203,14 +101,14 @@ __inline void WRITE(const char* fmt, ...) {
  *
  * @return Size of the dissassembled instruction in bytes
  */
-int disassemble_one ( const byte* ip, 
-                      const byte* mem_cs, 
-                      const int* mem_cp, 
-                      char* buf, 
-                      byte& op, 
-                      byte& op2, 
-                      byte &rd, 
-                      byte &rs, 
+int disassemble_one ( const byte* ip,
+                      const byte* mem_cs,
+                      const int* mem_cp,
+                      char* buf,
+                      byte& op,
+                      byte& op2,
+                      byte &rd,
+                      byte &rs,
                       int &imm32 )
 {
 	const byte* startIp = ip;
@@ -371,10 +269,10 @@ int disassemble_one ( const byte* ip,
  *
  * @return Size of the dissassembled instruction in bytes
  */
-int disassemble_one ( const byte* ip, 
-                      const byte* mem_cs, 
-                      const int* mem_cp, 
-                      char* buf ) 
+int disassemble_one ( const byte* ip,
+                      const byte* mem_cs,
+                      const int* mem_cp,
+                      char* buf )
 {
 	byte rd=0, rs=0;
 	byte op, op2;

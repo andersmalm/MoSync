@@ -62,6 +62,8 @@ int mAshmemEntryPoint = -1;
 #define ARM_PC_TO_ADDR(PC) ((int)assm.mipStart+PC*sizeof(AA::MDInstruction))
 #define ARM_PC_ADDR ARM_PC_TO_ADDR(ARM_PC)
 
+#define I (mInstructions[0])
+
 #define JUMP_GEN(addr)\
 	{\
 	addr&=mEnvironment.codeMask;\
@@ -567,12 +569,12 @@ namespace MoSync {
 
 	void ArmRecompiler::visit_PUSH() {
 		LOGC("PUSH\n");
-		byte rd = mInstructions[0].rd;
-		int imm32 = mInstructions[0].imm;
+		byte rd = I.rd;
+		byte n = (I.rs - rd) + 1;
 
 		AA::Register reg = loadRegister(REG_sp, AA::R1);
 		assm.ADD(AA::R1, reg, MEMORY_ADDR(AA::R2));
-		for(int i = rd; i < rd+imm32; i++) {
+		for(int i = rd; i < rd+n; i++) {
 			assm.SUB_imm8(AA::R1, AA::R1, 4);
 			AA::Register reg = loadRegister(i, AA::R2);
 			assm.STR(reg, 0, AA::R1);
@@ -584,13 +586,13 @@ namespace MoSync {
 
 	void ArmRecompiler::visit_POP() {
 		LOGC("POP\n");
-		byte rd = mInstructions[0].rd;
-		int imm32 = mInstructions[0].imm;
+		byte rd = I.rd;
+		byte n = (I.rs - rd) + 1;
 
 		AA::Register reg = loadRegister(REG_sp, AA::R1);
 		assm.ADD(AA::R1, reg, MEMORY_ADDR(AA::R2));
 
-		for(int i = rd; i > rd-imm32; i--)
+		for(int i = rd; i > rd-n; i--)
 		{
 			AA::Register saveReg = getSaveRegister(i, AA::R2);
 			assm.LDR(saveReg, 0, AA::R1);
@@ -603,10 +605,10 @@ namespace MoSync {
 	}
 
 	void ArmRecompiler::visit_CALL() {
-		LOGC("CALL\n");
-		byte rd = mInstructions[0].rd;
+		LOGC("CALLR\n");
+		byte rd = I.rd;
 
-		int returnAddr = mInstructions[0].ip + mInstructions[0].length;
+		int returnAddr = R.ip + mInstructions[0].length;
 		AA::Register saveReg = getSaveRegister(REG_rt, AA::R1);
 		assm.MOV_imm32(saveReg, returnAddr);
 		saveRegister(REG_rt, saveReg);
@@ -1001,6 +1003,7 @@ namespace MoSync {
 		assm.B(mPipeToArmInstMap[imm32] - (ARM_PC_ADDR) );        // jp imm32
 	}
 
+#if 0
 	void ArmRecompiler::visit_JPR() {
 		LOGC("JPR\n");
 		byte rd = mInstructions[0].rd;
@@ -1014,6 +1017,7 @@ namespace MoSync {
 		assm.LDR(AA::R2, 0, AA::R1);                // r1 = *r0
 		assm.MOV(AA::PC, AA::R2);
 	}
+#endif
 
 	void ArmRecompiler::visit_XB() {
 		LOGC("XB\n");

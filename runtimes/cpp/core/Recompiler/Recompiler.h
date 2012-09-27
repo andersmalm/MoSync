@@ -42,13 +42,14 @@ namespace MoSync {
 	// struct used to hold a decoded mosync instruction
 	struct Instruction {
 		byte op; // operation
-		byte op2; // if multiop (FAR)
 		byte rd; // destination register
 		byte rs; // source register
+		byte length; // instruction length in bytes
 		int imm; // immediate value
+		int imm2; // second immediate value (for 64-bit instructions)
+		int immx[4];	// extra immediate values (for CASE)
 
 		int ip; // address of the instruction
-		byte length; // instruction length in bytes
 	};
 
 	class VMCoreInt;
@@ -70,7 +71,7 @@ namespace MoSync {
 		int *regs;
 	};
 
-	// function pointer for the 
+	// function pointer for the
 
 
 
@@ -176,9 +177,9 @@ namespace MoSync {
 		};
 
 		struct Function {
-			Function(int start, int end) : 
+			Function(int start, int end) :
 				start(start), end(end), labels(0), next(0) {
-				addLabel(start);	
+				addLabel(start);
 			}
 			Label *findLabel(int ip) {
 				Label *l = labels;
@@ -186,7 +187,7 @@ namespace MoSync {
 				while(l) {
 					if(ip == l->ip) {
 						return l;
-						
+
 					} else if(ip > l->ip) {
 						potential = l;
 					}
@@ -228,7 +229,6 @@ namespace MoSync {
 			while(ip != mEnvironment.codeSize) {
 				ip+=decodeInstruction(&mEnvironment.mem_cs[ip], inst);
 
-				if(inst.op == Core::_FAR) inst.op = inst.op2;
 				switch(inst.op) {
 					case Core::_RET :
 					{
@@ -244,7 +244,7 @@ endOfFunction:
 						}
 					}
 					break;
-					case Core::_CASE: 
+					case Core::_CASE:
 					{
 						inst.imm<<=2;
 						//uint CaseStart = RECOMP_MEM(int, inst.imm, READ);
@@ -255,12 +255,12 @@ endOfFunction:
 						int maxJump = -1;
 						for(size_t i = 0; i < CaseLength; i++) {
 							int j = RECOMP_MEM(int, tableAddress+i*sizeof(int), READ);
-							if(j > maxJump) j = maxJump;						
+							if(j > maxJump) j = maxJump;
 							f->addLabel(j);
 						}
 						f->addLabel(defaultCaseAddress);
 						if(defaultCaseAddress>maxJump) maxJump=defaultCaseAddress;
-				
+
 						if(maxJump<ip) {
 							goto endOfFunction;
 						}
@@ -315,7 +315,7 @@ endOfFunction:
 			mFunctions = findFunctions();
 			//printFunctionsSize(mFunctions);
 			//printFunctions(fb);
-			for(mPass = 1; mPass <= mNumPasses; mPass++) { 
+			for(mPass = 1; mPass <= mNumPasses; mPass++) {
 				int ip = 1, windowIp = 1;
 				int numInstructions = 0;
 				T* thisImpl = ((T*)this);
@@ -332,7 +332,7 @@ endOfFunction:
 					ip+=decodeInstruction(&mEnvironment.mem_cs[ip], mInstructions[numInstructions]);
 					(thisImpl->*defaultVisitors[mInstructions[0].op])();
 					*/
-					thisImpl->beginInstruction(ip);	
+					thisImpl->beginInstruction(ip);
 
 					// fetch instruction window
 					for(; numInstructions < mInstructionsToFetch; numInstructions++) {
@@ -347,9 +347,9 @@ endOfFunction:
 					//if(!node) {
 						(thisImpl->*defaultVisitors[mInstructions[0].op])();
 						ip+=mInstructions[0].length;
-						for(int i = 1; i < numInstructions; i++) {   
+						for(int i = 1; i < numInstructions; i++) {
 							mInstructions[i-1] = mInstructions[i];
-						}		
+						}
 						numInstructions -= 1;
 					/*
 					} else {
@@ -363,9 +363,9 @@ endOfFunction:
 					}
 					*/
 
-					if(ip>mCurrentFunction->end) { 
+					if(ip>mCurrentFunction->end) {
 						thisImpl->endFunction(mCurrentFunction);
-						mCurrentFunction = mCurrentFunction->next; 
+						mCurrentFunction = mCurrentFunction->next;
 						mNextLabel = mCurrentFunction->labels;
 						if(mNextLabel) mNextLabel = mNextLabel->next;
 						thisImpl->beginFunction(mCurrentFunction);
@@ -373,8 +373,8 @@ endOfFunction:
 					}
 					else if(mNextLabel && ip>mNextLabel->ip) {
 						mNextLabel = mNextLabel->next;
-					} 
-	
+					}
+
 				}
 				thisImpl->endPass();
 			}
@@ -386,7 +386,8 @@ endOfFunction:
 		int decodeInstruction(const byte *ip, Instruction& inst) {
 //		int Recompiler::decodeInstruction(const byte *ip, Instruction& inst) {
 			inst.ip = (int)(ip-mEnvironment.mem_cs);
-			inst.length = disassemble_one(ip, mEnvironment.mem_cs, mEnvironment.mem_cp, (char*)NULL, inst.op, inst.op2, inst.rd, inst.rs, inst.imm);
+			inst.length = disassemble_one(ip, mEnvironment.mem_cs, mEnvironment.mem_cp,
+				(char*)NULL, inst.op, inst.op2, inst.rd, inst.rs, inst.imm);
 			return inst.length;
 		}
 
