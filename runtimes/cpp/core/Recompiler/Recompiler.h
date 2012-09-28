@@ -67,9 +67,8 @@ namespace MoSync {
 		const int *mem_ds;
 		int dataSize;
 		int dataMask;
-		const int *mem_cp;
-		int constantPoolSize;
 		int *regs;
+		double* floatRegs;
 	};
 
 	// function pointer for the
@@ -384,7 +383,7 @@ endOfFunction:
 		int decodeInstruction(const byte *ip, Instruction& inst) {
 //		int Recompiler::decodeInstruction(const byte *ip, Instruction& inst) {
 			inst.ip = (int)(ip-mEnvironment.mem_cs);
-			inst.length = disassemble_one(ip, mEnvironment.mem_cs, mEnvironment.mem_cp,
+			inst.length = disassemble_one(ip, mEnvironment.mem_cs,
 				(char*)NULL, inst.op, inst.rd, inst.rs, inst.imm,
 				inst.imm2, inst.imm3, inst.imm4);
 			return inst.length;

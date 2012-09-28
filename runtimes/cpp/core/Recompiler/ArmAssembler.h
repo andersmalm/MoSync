@@ -83,6 +83,20 @@ namespace avmplus
 		}
 		Register;
 
+		typedef enum {
+			FR0 = 0,
+			FR1,FR2,FR3,FR4,FR5,FR6,FR7,
+			FR8,FR9,FR10,FR11,FR12,FR13,FR14,FR15,
+			FR16,FR17,FR18,FR19,FR20,FR21,FR22,FR23,
+			FR24,FR25,FR26,FR27,FR28,FR29,FR30,FR31,
+		} FloatReg;
+
+		typedef enum {
+			DR0 = 0,
+			DR1,DR2,DR3,DR4,DR5,DR6,DR7,
+			DR8,DR9,DR10,DR11,DR12,DR13,DR14,DR15,
+		} DoubleReg;
+
 		/* ARM registers */
 		typedef enum
 		{
@@ -236,7 +250,29 @@ namespace avmplus
 
 		//---- added by mobile sorcery (fredrik)
 		void FMSR(FloatReg dst, Register src);
+		void FMRS(Register dst, FloatReg src);
 		void FSITOD(DoubleReg dst, FloatReg src);
+		void FUITOD(DoubleReg dst, FloatReg src);
+		void FCVTSD(FloatReg dst, DoubleReg src);
+		void FCVTDS(DoubleReg dst, FloatReg src);
+		void FMRRD(Register dst, DoubleReg src);
+		void FMDRR(DoubleReg dst, Register src);
+		void FCPYD(DoubleReg dst, DoubleReg src);
+		void MOV_imm64(Register dst, int imm, int imm2);
+		void FTOSID(FloatReg dst, DoubleReg src);
+		void FTOUID(FloatReg dst, DoubleReg src);
+		void FSTS(FloatReg src, int offset, Register dst);
+		void FSTD(DoubleReg src, int offset, Register dst);
+		void FLDS(FloatReg dst, int offset, Register src);
+		void FLDD(DoubleReg dst, int offset, Register src);
+		void FADDD(DoubleReg dst, DoubleReg a, DoubleReg b);
+		void FSUBD(DoubleReg dst, DoubleReg a, DoubleReg b);
+		void FMULD(DoubleReg dst, DoubleReg a, DoubleReg b);
+		void FDIVD(DoubleReg dst, DoubleReg a, DoubleReg b);
+		void FSQRTD(DoubleReg dst, DoubleReg src);
+		void STM(Register dst, int regMask);
+		void LDM(Register src, int regMask);
+		void STRD(Register src, int offset, Register dst);
 		//-----
 
 		// Cheeseball way of doing imm32.

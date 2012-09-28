@@ -62,6 +62,8 @@ int mAshmemEntryPoint = -1;
 #define ARM_PC_TO_ADDR(PC) ((int)assm.mipStart+PC*sizeof(AA::MDInstruction))
 #define ARM_PC_ADDR ARM_PC_TO_ADDR(ARM_PC)
 
+#define FLOAT_REG_OFFSET (32*4)
+
 #define I (mInstructions[0])
 
 #define JUMP_GEN(addr)\
@@ -98,13 +100,16 @@ int mAshmemEntryPoint = -1;
 //	assm.MVN_imm8(AA::R2, (sizeof(type)-1));
 //	assm.AND(AA::R2, AA::R2, MEMORY_MASK);
 
-#define LOAD(LDRFUNC, rd, rs, addr, type)\
-	{\
+#define LOAD_ADDR_TO_R3(r, addr, type)\
 	assm.MOV_imm32(AA::R3, addr);\
-	assm.ADD(AA::R3, AA::R3, loadRegister(rs, AA::R1));\
+	assm.ADD(AA::R3, AA::R3, loadRegister(r, AA::R1));\
 	assm.BIC_imm8(AA::R2, MEMORY_MASK(AA::R1), (sizeof(type)-1));\
 	assm.AND(AA::R3, AA::R3, AA::R2);\
 	assm.ADD(AA::R3, AA::R3, MEMORY_ADDR(AA::R1));\
+
+#define LOAD(LDRFUNC, rd, rs, addr, type)\
+	{\
+	LOAD_ADDR_TO_R3(rs, addr, type);\
 	AA::Register saveReg = getSaveRegister(rd, AA::R2);\
 	assm.LDRFUNC(saveReg, 0, AA::R3);\
 	saveRegister(rd, saveReg);\
@@ -112,11 +117,7 @@ int mAshmemEntryPoint = -1;
 
 #define STORE(STRFUNC, rd, rs, addr, type)\
 	{\
-	assm.MOV_imm32(AA::R3, addr);\
-	assm.ADD(AA::R3, AA::R3, loadRegister(rd, AA::R1));\
-	assm.BIC_imm8(AA::R2, MEMORY_MASK(AA::R1), (sizeof(type)-1));\
-	assm.AND(AA::R3, AA::R3, AA::R2);\
-	assm.ADD(AA::R3, AA::R3, MEMORY_ADDR(AA::R1));\
+	LOAD_ADDR_TO_R3(rd, addr, type);\
 	assm.STRFUNC(loadRegister(rs, AA::R1), 0, AA::R3);\
 	}
 
@@ -546,7 +547,7 @@ namespace MoSync {
 	{
 		AA::Register armReg;
 		if((armReg = findStaticRegister(mosync_reg))==AA::Unknown)
-			assm.STR((AA::Register)arm_r, ((mosync_reg)<<2), REGISTER_ADDR);
+			assm.STR(arm_r, ((mosync_reg)<<2), REGISTER_ADDR);
 		else
 			if(armReg!=arm_r)
 				assm.MOV(armReg, arm_r);
@@ -555,7 +556,7 @@ namespace MoSync {
 	AA::Register ArmRecompiler::loadRegister(int msreg, AA::Register armreg, bool shouldCopy) {
 		AA::Register ret;
 		if((ret=findStaticRegister(msreg))==AA::Unknown) {
-			assm.LDR((AA::Register)armreg, ((msreg)<<2), REGISTER_ADDR);
+			assm.LDR(armreg, ((msreg)<<2), REGISTER_ADDR);
 			return armreg;
 		} else {
 			if(shouldCopy) {
@@ -565,6 +566,54 @@ namespace MoSync {
 				return ret;
 			}
 		}
+	}
+
+	AA::DoubleReg ArmRecompiler::loadDoubleReg(int msreg) {
+		DEBUG_ASSERT(msreg < 16);
+		DEBUG_ASSERT(mDoubleRegAlloc <= AA::DR15);
+		AA::DoubleReg armreg = (AA::DoubleReg)mDoubleRegAlloc++;
+		assm.FLDD(armreg, FLOAT_REG_OFFSET + (msreg << 3), REGISTER_ADDR);
+		return armreg;
+	}
+
+	AA::DoubleReg ArmRecompiler::getSaveDoubleReg(int msreg) {
+		DEBUG_ASSERT(msreg < 16);
+		DEBUG_ASSERT(mDoubleRegAlloc <= AA::DR15);
+		return (AA::DoubleReg)mDoubleRegAlloc++;
+	}
+
+	void ArmRecompiler::saveDoubleReg(int msreg, AA::DoubleReg armreg) {
+		DEBUG_ASSERT(msreg < 16);
+		assm.FSTD(armreg, FLOAT_REG_OFFSET + (msreg << 3), REGISTER_ADDR);
+	}
+
+	AA::Register ArmRecompiler::loadRegister(int msreg) {
+		DEBUG_ASSERT(mRegisterAlloc <= AA::R10);
+		return loadRegister(msreg, (AA::Register)mRegisterAlloc++);
+	}
+
+	AA::Register ArmRecompiler::getSaveRegister(int msreg) {
+		DEBUG_ASSERT(mRegisterAlloc <= AA::R10);
+		return getSaveRegister(msreg, (AA::Register)mRegisterAlloc++);
+	}
+
+	AA::Register ArmRecompiler::getDISaveRegister(int msreg) {
+		DEBUG_ASSERT(mRegisterAlloc <= AA::R8);
+		// align-on-2 to allow STRD to work.
+		if(mRegisterAlloc & 1)
+			mRegisterAlloc++;
+		AA::Register ar = (AA::Register)mRegisterAlloc;
+		mRegisterAlloc += 2;
+		return ar;
+	}
+
+	void ArmRecompiler::saveDIRegister(int mosync_reg, AA::Register arm_r) {
+		assm.STRD(arm_r, ((mosync_reg)<<2), REGISTER_ADDR);
+	}
+
+	AA::FloatReg ArmRecompiler::getFloatTempReg() {
+		DEBUG_ASSERT(mDoubleRegAlloc <= AA::DR15);
+		return (AA::FloatReg)((mDoubleRegAlloc++) << 1);
 	}
 
 	void ArmRecompiler::visit_PUSH() {
@@ -1178,17 +1227,17 @@ namespace MoSync {
 	}
 
 	void ArmRecompiler::visit_FLOATS() {
-		AA::DoubleReg sr = getDoubleSaveReg(I.rd);
+		AA::DoubleReg sr = getSaveDoubleReg(I.rd);
 		AA::FloatReg temp = getFloatTempReg();
-		assm.FSMR(temp, loadRegister(I.rs));
+		assm.FMSR(temp, loadRegister(I.rs));
 		assm.FSITOD(sr, temp);
 		saveDoubleReg(I.rd, sr);
 	}
 
 	void ArmRecompiler::visit_FLOATUNS() {
-		AA::DoubleReg sr = getDoubleSaveReg(I.rd);
+		AA::DoubleReg sr = getSaveDoubleReg(I.rd);
 		AA::FloatReg temp = getFloatTempReg();
-		assm.FSMR(temp, loadRegister(I.rs));
+		assm.FMSR(temp, loadRegister(I.rs));
 		assm.FUITOD(sr, temp);
 		saveDoubleReg(I.rd, sr);
 	}
@@ -1225,13 +1274,12 @@ namespace MoSync {
 
 	void ArmRecompiler::visit_FSTRD() {
 		AA::Register sr = getDISaveRegister(I.rd);
-		assm.FMRRD(sr, loadDoubleRegister(I.rs));
-		saveRegister(I.rd, sr);
-		saveRegister(I.rd+1, sr+1);
+		assm.FMRRD(sr, loadDoubleReg(I.rs));
+		saveDIRegister(I.rd, sr);
 	}
 
-	void ArmRecompiler::visit_FSTRS() {
-		AA::DoubleReg sr = getDoubleSaveReg(I.rd);
+	void ArmRecompiler::visit_FLDRS() {
+		AA::DoubleReg sr = getSaveDoubleReg(I.rd);
 		AA::FloatReg temp = getFloatTempReg();
 		assm.FMSR(temp, loadRegister(I.rs));
 		assm.FCVTDS(sr, temp);
@@ -1239,33 +1287,32 @@ namespace MoSync {
 	}
 
 	void ArmRecompiler::visit_FLDRD() {
-		AA::DoubleReg sr = getDoubleSaveReg(I.rd);
+		AA::DoubleReg sr = getSaveDoubleReg(I.rd);
 		assm.FMDRR(sr, loadDIRegister(I.rs));
 		saveDoubleReg(I.rd, sr);
 	}
 
 	void ArmRecompiler::visit_FLDR() {
-		AA::DoubleReg sr = getDoubleSaveReg(I.rd);
+		AA::DoubleReg sr = getSaveDoubleReg(I.rd);
 		assm.FCPYD(sr, loadDoubleReg(I.rs));
 		saveDoubleReg(I.rd, sr);
 	}
 
 	void ArmRecompiler::visit_FLDIS() {
-		AA::DoubleReg sr = getDoubleSaveReg(I.rd);
+		AA::DoubleReg sr = getSaveDoubleReg(I.rd);
 		AA::FloatReg tempf = getFloatTempReg();
 		AA::Register tempi = getTempRegister();
-		loadImm(tempi, I.imm);
+		assm.MOV_imm32(tempi, I.imm);
 		assm.FMSR(tempf, tempi);
 		assm.FCVTDS(sr, tempf);
 		saveDoubleReg(I.rd, sr);
 	}
 
 	void ArmRecompiler::visit_FLDID() {
-		AA::DoubleReg sr = getDoubleSaveReg(I.rd);
+		AA::DoubleReg sr = getSaveDoubleReg(I.rd);
 		AA::FloatReg tempf = getFloatTempReg();
 		AA::Register tempi = getDITempRegister();
-		loadImm(tempi, I.imm);
-		loadImm(tempi+1, I.imm2);
+		assm.MOV_imm64(tempi, I.imm, I.imm2);
 		assm.FMDRR(sr, tempi);
 		saveDoubleReg(I.rd, sr);
 	}
@@ -1278,17 +1325,158 @@ namespace MoSync {
 		saveRegister(I.rd, sr);
 	}
 
+	void ArmRecompiler::visit_FIXUN_TRUNCS() {
+		AA::Register sr = getSaveRegister(I.rd);
+		AA::FloatReg temp = getFloatTempReg();
+		assm.FTOUID(temp, loadDoubleReg(I.rs));
+		assm.FMRS(sr, temp);
+		saveRegister(I.rd, sr);
+	}
+
 	void ArmRecompiler::fix_truncd(int rd, int frs) {
 		int64_t ll = (long long)mEnvironment.floatRegs[frs];
-		mEnvironment.regs[rs+1];
+		mEnvironment.regs[rd] = (int)ll;
+		mEnvironment.regs[rd+1] = (int)(ll >> 32);
+	}
+
+	void ArmRecompiler::fixun_truncd(int rd, int frs) {
+		uint64_t ll = (unsigned long long)mEnvironment.floatRegs[frs];
+		mEnvironment.regs[rd] = (int)ll;
+		mEnvironment.regs[rd+1] = (int)(ll >> 32);
 	}
 
 	void ArmRecompiler::visit_FIX_TRUNCD() {
 		emitTwoArgFuncCall(&ArmRecompiler::fix_truncd, I.rd, I.rs);
 	}
-			temp.ll = (long long)FRS.d;
-			WRITE_REG(rd, temp.i[0]);
-			WRITE_REG(rd+1, temp.i[1]);
+
+	void ArmRecompiler::visit_FIXUN_TRUNCD() {
+		emitTwoArgFuncCall(&ArmRecompiler::fix_truncd, I.rd, I.rs);
+	}
+
+	void ArmRecompiler::visit_FSTS() {
+		AA::FloatReg tempf = getFloatTempReg();
+		LOAD_ADDR_TO_R3(I.rd, I.imm, int);
+		assm.FCVTSD(tempf, loadDoubleReg(I.rs));
+		assm.FSTS(tempf, 0, AA::R3);
+	}
+
+	void ArmRecompiler::visit_FSTD() {
+		LOAD_ADDR_TO_R3(I.rd, I.imm, int);
+		assm.FSTD(loadDoubleReg(I.rs), 0, AA::R3);
+	}
+
+	void ArmRecompiler::visit_FLDS() {
+		AA::DoubleReg sr = getSaveDoubleReg(I.rd);
+		AA::FloatReg tempf = getFloatTempReg();
+		LOAD_ADDR_TO_R3(I.rs, I.imm, int);
+		assm.FLDS(tempf, 0, AA::R3);
+		assm.FCVTDS(sr, tempf);
+		saveDoubleReg(I.rd, sr);
+	}
+
+	void ArmRecompiler::visit_FLDD() {
+		AA::DoubleReg sr = getSaveDoubleReg(I.rd);
+		LOAD_ADDR_TO_R3(I.rs, I.imm, int);
+		assm.FLDD(sr, 0, AA::R3);
+		saveDoubleReg(I.rd, sr);
+	}
+
+	void ArmRecompiler::visit_FADD() {
+		AA::DoubleReg sr = getSaveDoubleReg(I.rd);
+		assm.FADDD(sr, loadDoubleReg(I.rd), loadDoubleReg(I.rs));
+		saveDoubleReg(I.rd, sr);
+	}
+
+	void ArmRecompiler::visit_FSUB() {
+		AA::DoubleReg sr = getSaveDoubleReg(I.rd);
+		assm.FSUBD(sr, loadDoubleReg(I.rd), loadDoubleReg(I.rs));
+		saveDoubleReg(I.rd, sr);
+	}
+
+	void ArmRecompiler::visit_FMUL() {
+		AA::DoubleReg sr = getSaveDoubleReg(I.rd);
+		assm.FMULD(sr, loadDoubleReg(I.rd), loadDoubleReg(I.rs));
+		saveDoubleReg(I.rd, sr);
+	}
+
+	void ArmRecompiler::visit_FDIV() {
+		AA::DoubleReg sr = getSaveDoubleReg(I.rd);
+		assm.FDIVD(sr, loadDoubleReg(I.rd), loadDoubleReg(I.rs));
+		saveDoubleReg(I.rd, sr);
+	}
+
+	void ArmRecompiler::visit_FSQRT() {
+		AA::DoubleReg sr = getSaveDoubleReg(I.rd);
+		assm.FSQRTD(sr, loadDoubleReg(I.rd));
+		saveDoubleReg(I.rd, sr);
+	}
+
+	void ArmRecompiler::fsin(int frd) {
+		mEnvironment.floatRegs[frd] = sin(mEnvironment.floatRegs[frd]);
+	}
+	void ArmRecompiler::visit_FSIN() {
+		emitOneArgFuncCall(&ArmRecompiler::fsin, I.rd);
+	}
+
+	void ArmRecompiler::fcos(int frd) {
+		mEnvironment.floatRegs[frd] = cos(mEnvironment.floatRegs[frd]);
+	}
+	void ArmRecompiler::visit_FCOS() {
+		emitOneArgFuncCall(&ArmRecompiler::fcos, I.rd);
+	}
+
+	void ArmRecompiler::fexp(int frd) {
+		mEnvironment.floatRegs[frd] = exp(mEnvironment.floatRegs[frd]);
+	}
+	void ArmRecompiler::visit_FEXP() {
+		emitOneArgFuncCall(&ArmRecompiler::fexp, I.rd);
+	}
+
+	void ArmRecompiler::flog(int frd) {
+		mEnvironment.floatRegs[frd] = log(mEnvironment.floatRegs[frd]);
+	}
+	void ArmRecompiler::visit_FLOG() {
+		emitOneArgFuncCall(&ArmRecompiler::flog, I.rd);
+	}
+
+	void ArmRecompiler::fpow(int frd, int frs) {
+		mEnvironment.floatRegs[frd] = pow(
+			mEnvironment.floatRegs[frd], mEnvironment.floatRegs[frs]);
+	}
+	void ArmRecompiler::visit_FPOW() {
+		emitTwoArgFuncCall(&ArmRecompiler::fpow, I.rd, I.rs);
+	}
+
+	void ArmRecompiler::fatan2(int frd, int frs) {
+		mEnvironment.floatRegs[frd] = atan2(
+			mEnvironment.floatRegs[frd], mEnvironment.floatRegs[frs]);
+	}
+	void ArmRecompiler::visit_FATAN2() {
+		emitTwoArgFuncCall(&ArmRecompiler::fatan2, I.rd, I.rs);
+	}
+
+	void ArmRecompiler::visit_STD() {
+		LOAD_ADDR_TO_R3(I.rd, I.imm, int);
+		assm.STM(AA::R3, 3 << loadDIRegister(I.rs));
+	}
+
+	void ArmRecompiler::visit_LDD() {
+		AA::Register sr = getDISaveRegister(I.rd);
+		LOAD_ADDR_TO_R3(I.rs, I.imm, int);
+		assm.LDM(AA::R3, 3 << sr);
+		saveDIRegister(I.rd, sr);
+	}
+
+	void ArmRecompiler::visitFJC(AA::ConditionCode code) {
+		JUMP_IMM16(I.rd, I.rs, I.imm, code);
+	}
+
+	void ArmRecompiler::visit_FJC_EQ() { visitFJC(AA::EQ); }
+	void ArmRecompiler::visit_FJC_NE() { visitFJC(AA::NE); }
+	void ArmRecompiler::visit_FJC_GE() { visitFJC(AA::GE); }
+	void ArmRecompiler::visit_FJC_GT() { visitFJC(AA::GT); }
+	void ArmRecompiler::visit_FJC_LE() { visitFJC(AA::LE); }
+	void ArmRecompiler::visit_FJC_LT() { visitFJC(AA::LT); }
 
 	ArmRecompiler::ArmRecompiler() :
 		Recompiler<ArmRecompiler>(2) {
@@ -1327,6 +1515,12 @@ namespace MoSync {
 				op==OP_JC_GEU ||
 				op==OP_JC_GTU ||
 				op==OP_JC_LEU ||
+				op==OP_FJC_EQ ||
+			  op==OP_FJC_NE ||
+			  op==OP_FJC_GE ||
+				op==OP_FJC_GT ||
+				op==OP_FJC_LE ||
+				op==OP_FJC_LT ||
 				op==OP_JPI) {
 				int len = imm32 - (int)(lastIp-mEnvironment.mem_cs);
 				if(len<0) {
@@ -1356,7 +1550,7 @@ namespace MoSync {
 
 		for(int i = 0; i < NUM_STATICALLY_ALLOCATED_REGISTERS; i++) {
 			int max=0, maxIndex=0;
-			for(int j = 0; j < 128; j++) {
+			for(int j = 0; j < 32; j++) {
 				if(mRegisterCount[j]!=-1) {
 					if(mRegisterCount[j]>max) {
 						max = mRegisterCount[j];

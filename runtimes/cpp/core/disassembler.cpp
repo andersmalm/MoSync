@@ -76,25 +76,8 @@ __inline void WRITE(const char* fmt, ...) {
 #define REG(i) (i)
 #define MEM(type, addr) (addr)
 
-/**
- * Disassembles one MoSync IL instruction
- *
- * @param ip      [in] Pointer to the instruction
- * @param mem_cs  [in] Pointer to data section
- * @param mem_cp  [in] Pointer to constant section
- * @param buff    [in] Pointer to char buffer which can hold one
- *                     dissassembled instruction.
- * @param op      [out] Opcode
- * @param op2     [out] Second opcode, incase op was a prefix opcode
- * @param rd      [out] Destination register
- * @param rs      [out] Source register
- * @param imm32   [out] Immediate
- *
- * @return Size of the dissassembled instruction in bytes
- */
 int disassemble_one ( const byte* ip,
                       const byte* mem_cs,
-                      const int* mem_cp,
                       char* buf,
                       byte& op,
                       byte &rd,
@@ -270,27 +253,14 @@ int disassemble_one ( const byte* ip,
 	return (int)(ip-startIp);
 }
 
-
-/**
- * Disassembles one MoSync IL instruction
- *
- * @param ip      [in] Pointer to the instruction
- * @param mem_cs  [in] Pointer to data section
- * @param mem_cp  [in] Pointer to constant section
- * @param buff    [in] Pointer to char buffer which can hold one
- *                     dissassembled instruction.
- *
- * @return Size of the dissassembled instruction in bytes
- */
 int disassemble_one ( const byte* ip,
                       const byte* mem_cs,
-                      const int* mem_cp,
                       char* buf )
 {
 	byte rd=0, rs=0;
 	byte op;
 	int imm32, imm2, imm3, imm4;
-	return disassemble_one(ip, mem_cs, mem_cp, buf, op, rd, rs, imm32,
+	return disassemble_one(ip, mem_cs, buf, op, rd, rs, imm32,
 		imm2, imm3, imm4);
 }
 

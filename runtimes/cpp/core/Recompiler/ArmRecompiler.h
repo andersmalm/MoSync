@@ -186,7 +186,32 @@ AA::Register PIPE_TO_ARM_MAP(AA::Register temp) { assm.MOV_imm32(temp, (int) mPi
 		void loadStaticRegisters(AA &assm);
 		AA::Register getSaveRegister(int mosync_reg, AA::Register arm_r);
 		void saveRegister(int mosync_reg, AA::Register arm_r);
+		AA::Register getSaveRegister(int mosync_reg);
 		AA::Register loadRegister(int msreg, AA::Register armreg, bool shouldCopy=false);
+		AA::Register loadRegister(int msreg);
+
+		AA::FloatReg getFloatTempReg();
+		AA::DoubleReg getSaveDoubleReg(int mosync_reg);
+		AA::DoubleReg loadDoubleReg(int mosync_reg);
+		void saveDoubleReg(int mosync_reg, AA::DoubleReg);
+		AA::Register getDISaveRegister(int mosync_reg);
+		void saveDIRegister(int mosync_reg, AA::Register);
+		AA::Register loadDIRegister(int mosync_reg);
+		AA::Register getTempRegister();
+		AA::Register getDITempRegister();
+
+		void floatd(int,int);
+		void floatund(int,int);
+		void fix_truncd(int,int);
+		void fixun_truncd(int,int);
+		void fsin(int);
+		void fcos(int);
+		void fexp(int);
+		void flog(int);
+		void fpow(int,int);
+		void fatan2(int,int);
+
+		void visitFJC(AA::ConditionCode code);
 
 		RegisterMapElement registerMapping[NUM_STATICALLY_ALLOCATED_REGISTERS];
 		avmplus::ArmAssembler assm;
@@ -196,6 +221,11 @@ AA::Register PIPE_TO_ARM_MAP(AA::Register temp) { assm.MOV_imm32(temp, (int) mPi
 
 		int mArmStackPointer;
 		int mArmCodeSize;
+
+		// Number of the next register to allocate.
+		// Resets every instruction.
+		int mDoubleRegAlloc;	// start at DR0.
+		int mRegisterAlloc;	// start at R4.
 
 		AA::MDInstruction tempInst[512];
 

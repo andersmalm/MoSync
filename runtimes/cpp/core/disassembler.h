@@ -23,7 +23,6 @@ Software Foundation, 59 Temple Place - Suite 330, Boston, MA
  *
  * @param ip      [in] Pointer to the instruction
  * @param mem_cs  [in] Pointer to data section
- * @param mem_cp  [in] Pointer to constant section
  * @param buff    [in] Pointer to char buffer which can hold one
  *                     dissassembled instruction.
  *
@@ -31,7 +30,6 @@ Software Foundation, 59 Temple Place - Suite 330, Boston, MA
  */
 int disassemble_one ( const byte* ip, 
                       const byte* mem_cs, 
-                      const int* mem_cp, 
                       char* buf );
 
 /**
@@ -39,7 +37,6 @@ int disassemble_one ( const byte* ip,
  *
  * @param ip      [in] Pointer to the instruction
  * @param mem_cs  [in] Pointer to data section
- * @param mem_cp  [in] Pointer to constant section
  * @param buff    [in] Pointer to char buffer which can hold one
  *                     dissassembled instruction.
  * @param op      [out] Opcode
@@ -51,7 +48,6 @@ int disassemble_one ( const byte* ip,
  */
 int disassemble_one ( const byte* ip, 
                       const byte* mem_cs, 
-                      const int* mem_cp, 
                       char* buf, 
                       byte& op, 
                       byte &rd, 
