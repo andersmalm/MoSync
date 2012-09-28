@@ -1163,7 +1163,7 @@ namespace MoSync {
 		saveRegister(rd, reg);
 		saveReg = getSaveRegister(rd+1, AA::R0);
 		reg = loadRegister(rs+1, saveReg);
-		saveRegister(rd, reg);
+		saveRegister(rd+1, reg);
 	}
 
 	void ArmRecompiler::visit_LDDI() {
@@ -1174,7 +1174,7 @@ namespace MoSync {
 		saveRegister(rd, saveReg);
 		saveReg = getSaveRegister(rd+1, AA::R1);
 		assm.MOV_imm32(saveReg, I.imm2);
-		saveRegister(rd, saveReg);
+		saveRegister(rd+1, saveReg);
 	}
 
 	void ArmRecompiler::visit_FLOATS() {
@@ -1182,6 +1182,7 @@ namespace MoSync {
 		AA::FloatReg temp = getFloatTempReg();
 		assm.FSMR(temp, loadRegister(I.rs));
 		assm.FSITOD(sr, temp);
+		saveDoubleReg(I.rd, sr);
 	}
 
 	void ArmRecompiler::visit_FLOATUNS() {
@@ -1189,6 +1190,7 @@ namespace MoSync {
 		AA::FloatReg temp = getFloatTempReg();
 		assm.FSMR(temp, loadRegister(I.rs));
 		assm.FUITOD(sr, temp);
+		saveDoubleReg(I.rd, sr);
 	}
 
 	void ArmRecompiler::floatd(int frd, int rs) {
@@ -1216,14 +1218,77 @@ namespace MoSync {
 	void ArmRecompiler::visit_FSTRS() {
 		AA::Register sr = getSaveRegister(I.rd);
 		AA::FloatReg temp = getFloatTempReg();
-		FCVTSD(temp, loadDoubleRegister(I.rs));
-		FMRS(sr, temp);
+		assm.FCVTSD(temp, loadDoubleReg(I.rs));
+		assm.FMRS(sr, temp);
 		saveRegister(I.rd, sr);
 	}
+
 	void ArmRecompiler::visit_FSTRD() {
-		AA::Register sr = getSaveRegister(I.rd);
+		AA::Register sr = getDISaveRegister(I.rd);
+		assm.FMRRD(sr, loadDoubleRegister(I.rs));
+		saveRegister(I.rd, sr);
+		saveRegister(I.rd+1, sr+1);
 	}
-	OPC(FSTRD) FETCH_RD_RS WRITE_REG(rd, FRS.i[0]); WRITE_REG(rd+1, FRS.i[1]); EOP;
+
+	void ArmRecompiler::visit_FSTRS() {
+		AA::DoubleReg sr = getDoubleSaveReg(I.rd);
+		AA::FloatReg temp = getFloatTempReg();
+		assm.FMSR(temp, loadRegister(I.rs));
+		assm.FCVTDS(sr, temp);
+		saveDoubleReg(I.rd, sr);
+	}
+
+	void ArmRecompiler::visit_FLDRD() {
+		AA::DoubleReg sr = getDoubleSaveReg(I.rd);
+		assm.FMDRR(sr, loadDIRegister(I.rs));
+		saveDoubleReg(I.rd, sr);
+	}
+
+	void ArmRecompiler::visit_FLDR() {
+		AA::DoubleReg sr = getDoubleSaveReg(I.rd);
+		assm.FCPYD(sr, loadDoubleReg(I.rs));
+		saveDoubleReg(I.rd, sr);
+	}
+
+	void ArmRecompiler::visit_FLDIS() {
+		AA::DoubleReg sr = getDoubleSaveReg(I.rd);
+		AA::FloatReg tempf = getFloatTempReg();
+		AA::Register tempi = getTempRegister();
+		loadImm(tempi, I.imm);
+		assm.FMSR(tempf, tempi);
+		assm.FCVTDS(sr, tempf);
+		saveDoubleReg(I.rd, sr);
+	}
+
+	void ArmRecompiler::visit_FLDID() {
+		AA::DoubleReg sr = getDoubleSaveReg(I.rd);
+		AA::FloatReg tempf = getFloatTempReg();
+		AA::Register tempi = getDITempRegister();
+		loadImm(tempi, I.imm);
+		loadImm(tempi+1, I.imm2);
+		assm.FMDRR(sr, tempi);
+		saveDoubleReg(I.rd, sr);
+	}
+
+	void ArmRecompiler::visit_FIX_TRUNCS() {
+		AA::Register sr = getSaveRegister(I.rd);
+		AA::FloatReg temp = getFloatTempReg();
+		assm.FTOSID(temp, loadDoubleReg(I.rs));
+		assm.FMRS(sr, temp);
+		saveRegister(I.rd, sr);
+	}
+
+	void ArmRecompiler::fix_truncd(int rd, int frs) {
+		int64_t ll = (long long)mEnvironment.floatRegs[frs];
+		mEnvironment.regs[rs+1];
+	}
+
+	void ArmRecompiler::visit_FIX_TRUNCD() {
+		emitTwoArgFuncCall(&ArmRecompiler::fix_truncd, I.rd, I.rs);
+	}
+			temp.ll = (long long)FRS.d;
+			WRITE_REG(rd, temp.i[0]);
+			WRITE_REG(rd+1, temp.i[1]);
 
 	ArmRecompiler::ArmRecompiler() :
 		Recompiler<ArmRecompiler>(2) {
