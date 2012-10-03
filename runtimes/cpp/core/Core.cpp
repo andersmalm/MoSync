@@ -46,6 +46,8 @@ Software Foundation, 59 Temple Place - Suite 330, Boston, MA
 #define LOGC(...) do { if(InstCount < 10000) LOG(__VA_ARGS__); } while(0)
 #endif
 
+//#undef USE_ARM_RECOMPILER
+
 #ifdef GDB_DEBUG
 #define UPDATE_IP
 /*
@@ -75,7 +77,6 @@ using namespace MoSyncError;
 #include <vector>
 #endif
 
-#include <config_platform.h>
 #if defined(USE_ARM_RECOMPILER)
 /*
 #include "disassembler.h"

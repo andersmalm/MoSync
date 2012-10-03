@@ -994,8 +994,9 @@ namespace avmplus
 		PRINT_LAST_INSTRUCTION();
 	}
 	void ArmAssembler::MOV_imm64(Register dst, int imm, int imm2) {
+		AvmAssert(dst < 15);
 		MOV_imm32(dst, imm);
-		MOV_imm32(dst + 1, imm2);
+		MOV_imm32(Register(dst + 1), imm2);
 	}
 	void ArmAssembler::FTOSID(FloatReg dst, DoubleReg src) {
 		incInstructionCount();
@@ -1012,7 +1013,7 @@ namespace avmplus
 		incInstructionCount();
 		int U = ((~offset) >> 31);
 		int absOffset = abs(offset);
-		ArmAssert(absOffset <= 0xFF);
+		AvmAssert(absOffset <= 0xFF);
 		*mip++ = opcode | (r << 16) | (U << 23) | absOffset;
 		PRINT_LAST_INSTRUCTION();
 	}
@@ -1024,7 +1025,7 @@ namespace avmplus
 		FSmemMov(0x0D000A00, src, offset, dst);
 	}
 	void ArmAssembler::FLDS(FloatReg dst, int offset, Register src) {
-		FSmemMov(0x0D100A00, src, offset, dst);
+		FSmemMov(0x0D100A00, dst, offset, src);
 	}
 
 	void ArmAssembler::FDmemMov(int opcode, DoubleReg d, int offset, Register r) {
@@ -1034,7 +1035,7 @@ namespace avmplus
 		FDmemMov(0x0D000B00, src, offset, dst);
 	}
 	void ArmAssembler::FLDD(DoubleReg dst, int offset, Register src) {
-		FDmemMov(0x0D100B00, src, offset, dst);
+		FDmemMov(0x0D100B00, dst, offset, src);
 	}
 
 	void ArmAssembler::FADDD(DoubleReg dst, DoubleReg a, DoubleReg b) {
@@ -1069,12 +1070,19 @@ namespace avmplus
 	}
 	void ArmAssembler::LDM(Register src, int regMask) {
 		incInstructionCount();
-		*mip++ = 0x08100000 | (dst << 16) | regMask;
+		*mip++ = 0x08100000 | (src << 16) | regMask;
 		PRINT_LAST_INSTRUCTION();
 	}
 	void ArmAssembler::STRD(Register src, int offset, Register dst) {
 		incInstructionCount();
-		*mip++ = 0x004000F0 | (dst << 16) | regMask;
+		*mip++ = 0x014000F0 | (src << 16) | (dst << 12) |
+			(offset & 0xF) | ((offset >> 4) << 8);
+		PRINT_LAST_INSTRUCTION();
+	}
+	void ArmAssembler::LDRD(Register src, int offset, Register dst) {
+		incInstructionCount();
+		*mip++ = 0x014000D0 | (src << 16) | (dst << 12) |
+			(offset & 0xF) | ((offset >> 4) << 8);
 		PRINT_LAST_INSTRUCTION();
 	}
 

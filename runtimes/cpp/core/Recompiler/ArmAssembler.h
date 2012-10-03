@@ -273,6 +273,11 @@ namespace avmplus
 		void STM(Register dst, int regMask);
 		void LDM(Register src, int regMask);
 		void STRD(Register src, int offset, Register dst);
+		void LDRD(Register dst, int offset, Register src);
+
+		void FmemMov(int opcode, int offset, Register r);
+		void FSmemMov(int opcode, FloatReg f, int offset, Register r);
+		void FDmemMov(int opcode, DoubleReg d, int offset, Register r);
 		//-----
 
 		// Cheeseball way of doing imm32.

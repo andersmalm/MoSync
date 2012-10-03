@@ -568,6 +568,12 @@ namespace MoSync {
 		}
 	}
 
+	AA::Register ArmRecompiler::loadDIRegister(int msreg) {
+		AA::Register armreg = getDITempRegister();
+		assm.LDRD(armreg, ((msreg)<<2), REGISTER_ADDR);
+		return armreg;
+	}
+
 	AA::DoubleReg ArmRecompiler::loadDoubleReg(int msreg) {
 		DEBUG_ASSERT(msreg < 16);
 		DEBUG_ASSERT(mDoubleRegAlloc <= AA::DR15);
@@ -590,6 +596,18 @@ namespace MoSync {
 	AA::Register ArmRecompiler::loadRegister(int msreg) {
 		DEBUG_ASSERT(mRegisterAlloc <= AA::R10);
 		return loadRegister(msreg, (AA::Register)mRegisterAlloc++);
+	}
+
+	AA::Register ArmRecompiler::getTempRegister() {
+		DEBUG_ASSERT(mRegisterAlloc <= AA::R10);
+		return (AA::Register)mRegisterAlloc++;
+	}
+
+	AA::Register ArmRecompiler::getDITempRegister() {
+		DEBUG_ASSERT(mRegisterAlloc <= AA::R8);
+		AA::Register r = (AA::Register)mRegisterAlloc;
+		mRegisterAlloc += 2;
+		return r;
 	}
 
 	AA::Register ArmRecompiler::getSaveRegister(int msreg) {
@@ -647,6 +665,43 @@ namespace MoSync {
 			assm.LDR(saveReg, 0, AA::R1);
 			saveRegister(i, saveReg);
 			assm.ADD_imm8(AA::R1, AA::R1, 4);
+		}
+		AA::Register saveReg = getSaveRegister(REG_sp, AA::R1);
+		assm.SUB(saveReg, AA::R1, MEMORY_ADDR(AA::R2));
+		saveRegister(REG_sp, saveReg);
+	}
+
+	void ArmRecompiler::visit_FPUSH() {
+		LOGC("FPUSH\n");
+		byte rd = I.rd;
+		byte n = (I.rs - rd) + 1;
+
+		AA::Register reg = loadRegister(REG_sp, AA::R1);
+		assm.ADD(AA::R1, reg, MEMORY_ADDR(AA::R2));
+		for(int i = rd; i < rd+n; i++) {
+			assm.SUB_imm8(AA::R1, AA::R1, 8);
+			AA::DoubleReg reg = loadDoubleReg(i);
+			assm.FSTD(reg, 0, AA::R1);
+		}
+		AA::Register saveReg = getSaveRegister(REG_sp, AA::R1);
+		assm.SUB(saveReg, AA::R1, MEMORY_ADDR(AA::R2));
+		saveRegister(REG_sp, saveReg);
+	}
+
+	void ArmRecompiler::visit_FPOP() {
+		LOGC("FPOP\n");
+		byte rd = I.rd;
+		byte n = (I.rs - rd) + 1;
+
+		AA::Register reg = loadRegister(REG_sp, AA::R1);
+		assm.ADD(AA::R1, reg, MEMORY_ADDR(AA::R2));
+
+		for(int i = rd; i > rd-n; i--)
+		{
+			AA::DoubleReg saveReg = getSaveDoubleReg(i);
+			assm.FLDD(saveReg, 0, AA::R1);
+			saveDoubleReg(i, saveReg);
+			assm.ADD_imm8(AA::R1, AA::R1, 8);
 		}
 		AA::Register saveReg = getSaveRegister(REG_sp, AA::R1);
 		assm.SUB(saveReg, AA::R1, MEMORY_ADDR(AA::R2));
@@ -1492,7 +1547,7 @@ namespace MoSync {
 
 		byte *loopWeights = new byte[mEnvironment.codeSize];
 		memset(loopWeights, 0, mEnvironment.codeSize);
-		const byte *ip = mEnvironment.mem_cs+1;
+		const byte *ip = mEnvironment.mem_cs+START_IP;
 		const byte *endip = &ip[mEnvironment.codeSize];
 
 		Instruction inst;
@@ -1532,7 +1587,7 @@ namespace MoSync {
 			}
 		} while(ip!=endip);
 
-		ip = mEnvironment.mem_cs;
+		ip = mEnvironment.mem_cs + START_IP;
 		do {
 			int loopWeight = (int)loopWeights[(int)(ip-mEnvironment.mem_cs)];
 			loopWeight = 1+loopWeight*loopWeight;

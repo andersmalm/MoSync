@@ -36,6 +36,8 @@ Software Foundation, 59 Temple Place - Suite 330, Boston, MA
 	(addr) & mEnvironment.dataMask & ~(sizeof(type) - 1))
 #define RECOMP_MEM(type, addr, write) RECOMP_MEMREF(type, addr)
 
+#define START_IP 0x100
+
 namespace MoSync {
 
 	// struct used to hold a decoded mosync instruction
@@ -313,7 +315,7 @@ endOfFunction:
 			//printFunctionsSize(mFunctions);
 			//printFunctions(fb);
 			for(mPass = 1; mPass <= mNumPasses; mPass++) {
-				int ip = 1, windowIp = 1;
+				int ip = START_IP, windowIp = START_IP;
 				int numInstructions = 0;
 				T* thisImpl = ((T*)this);
 
