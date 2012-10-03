@@ -141,7 +141,7 @@ class VMCoreInt : public VMCore {
 public:
 
 #ifdef LOG_STATE_CHANGE
-	int csRegs[128];
+	int csRegs[NUM_REGS];
 	int *csMem;
 
 	struct StateChange {
@@ -243,7 +243,7 @@ public:
 #else
 			csMem = (int*)1;
 #endif
-			for(unsigned int i = 0; i < 128; i++) {
+			for(unsigned int i = 0; i < NUM_REGS; i++) {
 				csRegs[i] = regs[i];
 			}
 
@@ -260,7 +260,7 @@ public:
 			// dump initial state
 			Base::WriteFileStream stateLog(STATE_LOG_DIR "more_initial_state.txt");
 
-			for(unsigned int i = 0; i < 128; i++) {
+			for(unsigned int i = 0; i < NUM_REGS; i++) {
 				char temp[1024];
 				int len = sprintf(temp, "REG%d: %x\n", i, regs[i]);
 				stateLog.write(temp, len);
@@ -283,7 +283,7 @@ public:
 
 		//LOG("\nIP: %x\n", ip);
 
-		unsigned int i = 128;
+		unsigned int i = NUM_REGS;
 		while(i--) {
 			if(csRegs[i] != regs[i]) {
 				//LOG("R%d: 0x%x != %d\n", i, csRegs[i], gCore->regs[i]);
@@ -750,7 +750,7 @@ public:
 
 #if 0
 		LOGC("Regs:\n");
-		for(int i=0; i<128; i++) {
+		for(int i=0; i<NUM_REGS; i++) {
 			LOGC("%i: 0x%x(%i)\n", i, regs[i], regs[i]);
 		}
 		LOGC("\n");

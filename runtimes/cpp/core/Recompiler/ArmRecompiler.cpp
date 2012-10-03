@@ -1581,6 +1581,7 @@ namespace MoSync {
 				if(len<0) {
 					int i = imm32;
 					for(int j = 0; j < -len; j++) {
+						DEBUG_ASSERT(i < mEnvironment.codeSize);
 						loopWeights[i++]++;
 					}
 				}

@@ -22,8 +22,8 @@ Software Foundation, 59 Temple Place - Suite 330, Boston, MA
 
 #ifdef USE_ARM_RECOMPILER
 
-#include <Core.h>
-#include "disassembler.h"
+#include "../Core.h"
+#include "../disassembler.h"
 
 /*
 #define MIN(x, y) ((x)<(y)?(x):(y))
@@ -97,6 +97,7 @@ namespace MoSync {
 		};
 
 		Recompiler(int numPasses) :
+			mInstructions(NULL),
 			mInstructionsToFetch(1),
 			mNumPasses(numPasses),
 			mStopped(true) {
@@ -162,6 +163,7 @@ namespace MoSync {
 			mEnvironment.dataSize = core->Head.DataLen;
 			mEnvironment.dataMask = core->DATA_SEGMENT_SIZE-1;
 			mEnvironment.regs = core->regs;
+			mEnvironment.floatRegs = (double*)core->freg;
 		}
 
 		virtual void close() {

@@ -143,7 +143,7 @@ namespace avmplus
 #ifdef AVMPLUS_VERBOSE
 	char temp[16];
 	const char *findPipeReg(int addr) {
-		for(int i = 0; i < 128; i++) {
+		for(int i = 0; i < NUM_REGS; i++) {
 			if((int)&gCore->regs[i] == addr) {
 				if(i<28)
 					return pipe_regs[i];

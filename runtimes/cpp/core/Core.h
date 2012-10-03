@@ -109,13 +109,17 @@ namespace Core {
 #ifdef TRACK_SYSCALL_ID
 		int currentSyscallId;
 #endif
-		int regs[128];
+
+#define NUM_REGS 32
+#define NUM_FREGS 16
+
+		int regs[NUM_REGS];
 		union FREG {
 			double d;
 			uint64_t ll;
 			int i[2];
 		};
-		FREG freg[16];
+		FREG freg[NUM_FREGS];
 
 #ifdef GDB_DEBUG
 		GdbStub *mGdbStub;
