@@ -1606,7 +1606,6 @@ namespace MoSync {
 			loopWeight = 1+loopWeight*loopWeight;
 			//const byte *lastIp = ip;
 
-			inst.rd = 0xff; inst.rs = 0xff;
 			ip += decodeInstruction(ip, inst);
 
 			if(inst.rd != 0xff) mRegisterCount[inst.rd]+=loopWeight;

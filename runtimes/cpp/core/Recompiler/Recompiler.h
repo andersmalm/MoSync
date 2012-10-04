@@ -226,7 +226,7 @@ namespace MoSync {
 		};
 
 		Function* findFunctions() {
-			int ip = 1;
+			int ip = START_IP;
 			Function *start;
 			Function *f = start = new Function(0, 0);
 			Instruction inst;
@@ -285,11 +285,22 @@ endOfFunction:
 					case OP_JC_LEU:
 					case OP_JC_LT:
 					case OP_JC_LTU:
+
+					case OP_FJC_EQ:
+					case OP_FJC_NE:
+					case OP_FJC_GE:
+					case OP_FJC_GT:
+					case OP_FJC_LE:
+					case OP_FJC_LT:
 						f->addLabel(inst.imm);
 					break;
 					default: break;
 				}
 			}
+			// if we're at the end of the program
+			if(f->end == 0 && ip == mEnvironment.codeSize)
+				f->end = ip;
+			DEBUG_ASSERT(f->end > f->start);
 			return start;
 		}
 
@@ -366,8 +377,11 @@ endOfFunction:
 					}
 					*/
 
+					DEBUG_ASSERT(mCurrentFunction->end > mCurrentFunction->start);
 					if(ip>mCurrentFunction->end) {
 						thisImpl->endFunction(mCurrentFunction);
+						if(!mCurrentFunction->next)
+							break;
 						mCurrentFunction = mCurrentFunction->next;
 						mNextLabel = mCurrentFunction->labels;
 						if(mNextLabel) mNextLabel = mNextLabel->next;
@@ -388,10 +402,15 @@ endOfFunction:
 	protected:
 		int decodeInstruction(const byte *ip, Instruction& inst) {
 //		int Recompiler::decodeInstruction(const byte *ip, Instruction& inst) {
+			//char buf[1024];
+			inst.rd = 0xff; inst.rs = 0xff;
 			inst.ip = (int)(ip-mEnvironment.mem_cs);
 			inst.length = disassemble_one(ip, mEnvironment.mem_cs,
 				(char*)NULL, inst.op, inst.rd, inst.rs, inst.imm,
 				inst.imm2, inst.imm3, inst.imm4);
+			//LOG("%s", buf);
+			DEBUG_ASSERT(inst.rd == 0xff || inst.rd < NUM_REGS);
+			DEBUG_ASSERT(inst.rs == 0xff || inst.rs < NUM_REGS);
 			return inst.length;
 		}
 

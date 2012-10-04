@@ -626,38 +626,6 @@ public:
 	}
 #endif
 
-	void GenConstTable() {
-		int n, p;
-		int mask;
-
-		for(p=0; p<32; p++) {
-			regs[p] = 0;
-		}
-
-		for (n=1;n<17;n++)
-		{
-			regs[p++] = n;
-			regs[p++] = -n;
-		}
-
-		mask = 0x20;
-
-		for (n=0;n<32-5;n++)
-		{
-			regs[p++] = mask-1;
-			regs[p++] = mask;
-			mask <<= 1;
-		}
-
-		mask = 0x10;
-
-		for (n=0;n<10;n++)
-		{
-			regs[p++] = mask ^ 0xffffffff;
-			mask <<= 1;
-		}
-	}
-
 	//****************************************
 	//				 Init MA
 	//****************************************
@@ -739,7 +707,7 @@ public:
 #ifdef MEMORY_DEBUG
 		InstCount = 0;
 #endif
-		GenConstTable();
+
 #ifdef FAKE_CALL_STACK
 		resetFakeCallStack();
 #endif
@@ -1208,7 +1176,7 @@ void WRITE_REG(int reg, int value) {
 #define FETCH_FRD	rd = IB; LOGC(" frd%i(0x%" PRIx64 ", %g)", rd, FRD.ll, FRD.d);
 #define FETCH_FRS	rs = IB; LOGC(" frs%i(0x%" PRIx64 ", %g)", rs, FRS.ll, FRS.d);
 
-#define FETCH_CONST FETCH_IMM32
+#define FETCH_CONST FETCH_INT
 
 #include "core_helpers.h"
 
