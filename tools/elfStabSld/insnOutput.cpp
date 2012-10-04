@@ -75,7 +75,7 @@ const size_t nIntRegs = ARRAY_SIZE(mapip2_register_names), nFloatRegs = ARRAY_SI
 #define FETCH_FRD_CONST FETCH_FRD FETCH_CONST
 #define FETCH_FRD_RS_CONST FETCH_FRD FETCH_RS FETCH_CONST
 
-#define FETCH_CONST if(op != OP_CALLI) checkFunctionPointer(ip); FETCH_IMM32
+#define FETCH_CONST if(op != OP_CALLI) checkFunctionPointer(ip); FETCH_INT
 
 #define IMM imm32
 #define IMMU "(uint)" << imm32

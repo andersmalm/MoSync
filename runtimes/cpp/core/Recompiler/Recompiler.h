@@ -242,6 +242,8 @@ endOfFunction:
 						l = f->findNextLabel(ipOfInstruction);
 						if(!l) {
 							f->end = ip;
+							if(ip == mEnvironment.codeSize)
+								break;
 							Function *next = new Function(ip, 0);
 							f->next = next;
 							f = f->next;

@@ -708,6 +708,8 @@ public:
 		InstCount = 0;
 #endif
 
+		regs[0] = 0;
+
 #ifdef FAKE_CALL_STACK
 		resetFakeCallStack();
 #endif

@@ -1680,6 +1680,8 @@ namespace MoSync {
 	}
 
 	void ArmRecompiler::beginInstruction(int ip) {
+		mDoubleRegAlloc = AA::FR0;
+		mRegisterAlloc = AA::R4;
 		if(mPass==1) {
 			// reset
 			assm.mip = tempInst;
