@@ -85,7 +85,9 @@ namespace MoSync {
 
 		// make a tree for all sequences possible, and use it for early outs.
 		struct InstructionPatternNode {
-			InstructionPatternNode(InstructionPatternNode *parent=NULL, int depth=0) : depth(depth), matcher(0), visitor(0), parent(parent) {
+			InstructionPatternNode(InstructionPatternNode *_parent=NULL, int _depth=0) :
+				depth(_depth), matcher(0), visitor(0), parent(_parent)
+			{
 				memset(children, 0, sizeof(InstructionPatternNode*));
 			}
 
@@ -171,7 +173,7 @@ namespace MoSync {
 		}
 
 		struct Label {
-			Label(int ip) : ip(ip), next(0) {
+			Label(int _ip) : ip(_ip), next(0) {
 			}
 
 			int ip;
@@ -179,8 +181,8 @@ namespace MoSync {
 		};
 
 		struct Function {
-			Function(int start, int end) :
-				start(start), end(end), labels(0), next(0) {
+			Function(int _start, int _end) :
+				start(_start), end(_end), labels(0), next(0) {
 				addLabel(start);
 			}
 			Label *findLabel(int ip) {
@@ -200,7 +202,7 @@ namespace MoSync {
 
 			Label *findNextLabel(int ip) {
 				Label *l;
-				if(l = findLabel(ip)) return l->next;
+				if((l = findLabel(ip))) return l->next;
 				else return 0;
 			}
 
@@ -211,9 +213,9 @@ namespace MoSync {
 				} else {
 					Label *l = findLabel(ip);
 					if(l->ip != ip) {
-						Label *next = l->next;
+						Label *_next = l->next;
 						l->next = new Label(ip);
-						l->next->next = next;
+						l->next->next = _next;
 					}
 				}
 			}
@@ -248,7 +250,7 @@ endOfFunction:
 					break;
 					case OP_CASE:
 					{
-						uint32 CaseStart = inst.imm;
+						//uint CaseStart = inst.imm;
 						uint CaseLength = inst.imm2;
 						uint tableAddress = inst.imm3;
 						int defaultLabel = inst.imm4;

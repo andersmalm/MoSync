@@ -370,14 +370,22 @@ class DirTask < FileTask
 		p @NAME
 		FileUtils.mkdir_p @NAME
 	end
-	def timestamp
-		if File.directory?(@NAME)
-			t = File.ctime(@NAME)
-		else
-			t = EARLY
+	def needed?(log = true)
+		if(!File.exist?(@NAME))
+			puts "Because directory does not exist:" if(log)
+			return true
 		end
-		#puts "Timestamp(#{@NAME}): #{t}"
-		#p File.directory?(@NAME)
+		if(!File.directory?(@NAME))
+			puts "Because file is not a directory:" if(log)
+			return true
+		end
+		return false
+	end
+	def out_of_date?(timestamp, log)
+		return false
+	end
+	def timestamp
+		return EARLY
 	end
 end
 

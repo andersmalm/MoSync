@@ -28,6 +28,8 @@ using namespace MoSyncError;
 using namespace avmplus;
 using namespace Core;
 
+#include <math.h>
+
 #ifdef _WIN32
 #include <windows.h>
 #include <stdint.h>
@@ -59,7 +61,7 @@ int mAshmemEntryPoint = -1;
 #define SETUP_DEFAULT_VISITOR_ELEM(inst) defaultVisitors[OP_##inst] = &ArmRecompiler::visit_##inst;
 
 #define ARM_PC (assm.mInstructionCount)
-#define ARM_PC_TO_ADDR(PC) ((int)assm.mipStart+PC*sizeof(AA::MDInstruction))
+#define ARM_PC_TO_ADDR(PC) ((int)(size_t)assm.mipStart+PC*sizeof(AA::MDInstruction))
 #define ARM_PC_ADDR ARM_PC_TO_ADDR(ARM_PC)
 
 #define FLOAT_REG_OFFSET (32*4)
@@ -150,14 +152,14 @@ int mAshmemEntryPoint = -1;
 	}
 
 #define LOAD_MEMORY_FUNC(func, memory_addr, arm_r, temp_r)\
-	assm.MOV_imm32((AA::Register)temp_r, (int)memory_addr);\
+	assm.MOV_imm32((AA::Register)temp_r, (int)(size_t)memory_addr);\
 	assm.func((AA::Register)arm_r, 0, (AA::Register)temp_r);\
 
 #define LOAD_MEMORY(memory_addr, arm_r, temp_r) LOAD_MEMORY_FUNC(LDR, memory_addr, arm_r, temp_r);
 
 
 #define SAVE_MEMORY(memory_addr, arm_r, temp_reg)\
-	assm.MOV_imm32(temp_reg, (int)memory_addr);\
+	assm.MOV_imm32(temp_reg, (int)(size_t)memory_addr);\
 	assm.STR((AA::Register)arm_r, 0, (AA::Register)temp_reg);\
 
 //assm.MOV_imm32(temp_reg, (int)mPipeToArmInstMap);
@@ -274,6 +276,8 @@ int mAshmemEntryPoint = -1;
 		__android_log_write(ANDROID_LOG_INFO, "JNI Recompiler", b);
 
 		return mem;
+#elif defined(LINUX)
+		return malloc(size);
 #else	// winmobile
 		return VirtualAlloc(NULL, size, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
 #endif
@@ -334,6 +338,8 @@ int mAshmemEntryPoint = -1;
 //		__android_log_write(ANDROID_LOG_INFO, "JNI Recompiler", "allocating entry point");
 
 //		return allocateCodeMemory(size);
+#elif defined(LINUX)
+		return malloc(size);
 #else	// winmobile
 		return VirtualAlloc(NULL, size, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
 #endif
@@ -346,6 +352,8 @@ int mAshmemEntryPoint = -1;
 		mCodeChunk.close();
 #elif defined(_android)
 		free(addr);
+#elif defined(LINUX)
+		free(addr);
 #else	// winmobile
 		VirtualFree(addr, 0, MEM_RELEASE);
 #endif
@@ -357,6 +365,8 @@ int mAshmemEntryPoint = -1;
 		DEBUG_ASSERT(addr == mEntryChunk.address());
 		mEntryChunk.close();
 #elif defined(_android)
+		free(addr);
+#elif defined(LINUX)
 		free(addr);
 #else	// winmobile
 		VirtualFree(addr, 0, MEM_RELEASE);
@@ -382,6 +392,8 @@ int mAshmemEntryPoint = -1;
 
 		cacheflush((long int)addr, (long int)addr+len, 0);
 		return;
+#elif defined(LINUX)
+		return;
 #else // winmobile
 		// This seems to work, but might not be correct
 		// Might be better to call CacheSync(...)
@@ -401,13 +413,15 @@ int mAshmemEntryPoint = -1;
 	}
 
 namespace MoSync {
-	void ArmRecompiler::saveStackPointer(AA& assm, AA::Register temp) {
+#define assm _assm
+	void ArmRecompiler::saveStackPointer(AA &_assm, AA::Register temp) {
 		SAVE_MEMORY(&mArmStackPointer, AA::SP, temp);
 	}
 
-	void ArmRecompiler::loadStackPointer(AA& assm, AA::Register temp) {
+	void ArmRecompiler::loadStackPointer(AA &_assm, AA::Register temp) {
 		LOAD_MEMORY(&mArmStackPointer, AA::SP, temp);
 	}
+#undef assm
 
 	void ArmRecompiler::generateEntryPoint()
 	{
@@ -426,7 +440,7 @@ namespace MoSync {
 		saveStackPointer(entryPoint, AA::R1);
 
 		// store mosync register address
-		entryPoint.MOV_imm32(REGISTER_ADDR, (int)&mEnvironment.regs[0]);
+		entryPoint.MOV_imm32(REGISTER_ADDR, (int)(size_t)&mEnvironment.regs[0]);
 
 		loadEnvironmentRegisters(entryPoint);
 
@@ -461,7 +475,7 @@ namespace MoSync {
 		saveStaticRegisters(assm);
 		loadStackPointer(assm, AA::R3);
 		assm.MOV_imm32(AA::R3, FUNC_CAST(argFunc));
-		assm.MOV_imm32(AA::R0, (int)this);
+		assm.MOV_imm32(AA::R0, (int)(size_t)this);
 		assm.MOV_imm32(AA::R1, (int)arg1);
 		assm.MOV(AA::LR, AA::PC);
 		assm.MOV(AA::PC, AA::R3);
@@ -473,7 +487,7 @@ namespace MoSync {
 		saveStaticRegisters(assm);
 		loadStackPointer(assm, AA::R3);
 		assm.MOV_imm32(AA::R3, FUNC_CAST(argFunc));
-		assm.MOV_imm32(AA::R0, (int)this);
+		assm.MOV_imm32(AA::R0, (int)(size_t)this);
 		assm.MOV_imm32(AA::R1, (int)arg1);
 		assm.MOV_imm32(AA::R2, (int)arg2);
 		assm.MOV(AA::LR, AA::PC);
@@ -501,37 +515,35 @@ namespace MoSync {
 		return registerMapping[i].armReg;
 	}
 
-	void ArmRecompiler::saveStaticRegister(AA &assm, int i) {
+	void ArmRecompiler::saveStaticRegister(AA &_assm, int i) {
 	#ifdef NO_STATIC_REGISTERS
 		return;
 	#endif
-		assm.STR(registerMapping[i].armReg, ((registerMapping[i].msReg)<<2), REGISTER_ADDR);
+		_assm.STR(registerMapping[i].armReg, ((registerMapping[i].msReg)<<2), REGISTER_ADDR);
 	}
 
-	void ArmRecompiler::loadStaticRegister(AA &assm, int i) {
+	void ArmRecompiler::loadStaticRegister(AA &_assm, int i) {
 	#ifdef NO_STATIC_REGISTERS
 		return;
 	#endif
-		assm.LDR(registerMapping[i].armReg, ((registerMapping[i].msReg)<<2), REGISTER_ADDR);
+		_assm.LDR(registerMapping[i].armReg, ((registerMapping[i].msReg)<<2), REGISTER_ADDR);
 	}
 
-	void ArmRecompiler::saveStaticRegisters(AA &assm) {
-
+	void ArmRecompiler::saveStaticRegisters(AA &_assm) {
 	#ifdef NO_STATIC_REGISTERS
 		return;
 	#endif
 		for(int i = 0; i < NUM_STATICALLY_ALLOCATED_REGISTERS; i++) {
-			saveStaticRegister(assm, i);
+			saveStaticRegister(_assm, i);
 		}
 	}
 
-	void ArmRecompiler::loadStaticRegisters(AA &assm) {
-
+	void ArmRecompiler::loadStaticRegisters(AA &_assm) {
 	#ifdef NO_STATIC_REGISTERS
 		return;
 	#endif
 		for(int i = 0; i < NUM_STATICALLY_ALLOCATED_REGISTERS; i++) {
-			loadStaticRegister(assm, i);
+			loadStaticRegister(_assm, i);
 		}
 	}
 
@@ -643,8 +655,8 @@ namespace MoSync {
 		assm.ADD(AA::R1, reg, MEMORY_ADDR(AA::R2));
 		for(int i = rd; i < rd+n; i++) {
 			assm.SUB_imm8(AA::R1, AA::R1, 4);
-			AA::Register reg = loadRegister(i, AA::R2);
-			assm.STR(reg, 0, AA::R1);
+			AA::Register reg2 = loadRegister(i, AA::R2);
+			assm.STR(reg2, 0, AA::R1);
 		}
 		AA::Register saveReg = getSaveRegister(REG_sp, AA::R1);
 		assm.SUB(saveReg, AA::R1, MEMORY_ADDR(AA::R2));
@@ -680,8 +692,8 @@ namespace MoSync {
 		assm.ADD(AA::R1, reg, MEMORY_ADDR(AA::R2));
 		for(int i = rd; i < rd+n; i++) {
 			assm.SUB_imm8(AA::R1, AA::R1, 8);
-			AA::DoubleReg reg = loadDoubleReg(i);
-			assm.FSTD(reg, 0, AA::R1);
+			AA::DoubleReg dr = loadDoubleReg(i);
+			assm.FSTD(dr, 0, AA::R1);
 		}
 		AA::Register saveReg = getSaveRegister(REG_sp, AA::R1);
 		assm.SUB(saveReg, AA::R1, MEMORY_ADDR(AA::R2));
@@ -1168,7 +1180,7 @@ namespace MoSync {
 	#include "invoke_syscall_arm_recompiler.h"
 		}
 	#else
-		assm.MOV_imm32(AA::R0, (int)mEnvironment.core);
+		assm.MOV_imm32(AA::R0, (int)(size_t)mEnvironment.core);
 		assm.MOV_imm8(AA::R1, syscallNumber); // load syscall number into r1 (second param)
 
 		assm.MOV_imm32(AA::R2, invokeSyscallAddr);
@@ -1190,7 +1202,7 @@ namespace MoSync {
 
 		//				if (VM_Yield)
 		//				return ARM_PC;
-		assm.MOV_imm32(AA::R1, (int)mEnvironment.VM_Yield);
+		assm.MOV_imm32(AA::R1, (int)(size_t)mEnvironment.VM_Yield);
 		assm.LDR(AA::R0, 0, AA::R1);
 		assm.CMP_imm8(AA::R0, 0);                   // r0 == 0
 
@@ -1255,6 +1267,7 @@ namespace MoSync {
 	}
 
 	void ArmRecompiler::visit_BREAK() {
+		if(I.rd != 0xff)	// avoid gcc warning
 		DEBIG_PHAT_ERROR;
 	}
 
@@ -1365,7 +1378,6 @@ namespace MoSync {
 
 	void ArmRecompiler::visit_FLDID() {
 		AA::DoubleReg sr = getSaveDoubleReg(I.rd);
-		AA::FloatReg tempf = getFloatTempReg();
 		AA::Register tempi = getDITempRegister();
 		assm.MOV_imm64(tempi, I.imm, I.imm2);
 		assm.FMDRR(sr, tempi);
@@ -1594,11 +1606,11 @@ namespace MoSync {
 			loopWeight = 1+loopWeight*loopWeight;
 			//const byte *lastIp = ip;
 
-			inst.rd = -1; inst.rs = -1;
+			inst.rd = 0xff; inst.rs = 0xff;
 			ip += decodeInstruction(ip, inst);
 
-			if(inst.rd != -1) mRegisterCount[inst.rd]+=loopWeight;
-			if(inst.rs != -1) mRegisterCount[inst.rs]+=loopWeight;
+			if(inst.rd != 0xff) mRegisterCount[inst.rd]+=loopWeight;
+			if(inst.rs != 0xff) mRegisterCount[inst.rs]+=loopWeight;
 
 		} while(ip!=endip);
 
@@ -1664,7 +1676,7 @@ namespace MoSync {
 #ifdef DEBUG_DISASM
 			assm.verboseFlag = true;
 #endif
-			for(int i = 0; i < mEnvironment.codeSize; i++) mPipeToArmInstMap[i]+=(int)assm.mipStart;
+			for(int i = 0; i < mEnvironment.codeSize; i++) mPipeToArmInstMap[i]+=(int)(size_t)assm.mipStart;
 		}
 	}
 
@@ -1874,7 +1886,7 @@ static void MyExceptionHandlerL(TExcType aType)
 		}
 #endif	//0
 #endif	//__SYMBIAN32__
-		LOG("if(mPipeToArmInstMap) (%i)\n", mPipeToArmInstMap);
+		LOG("if(mPipeToArmInstMap) (%i)\n", (int)(size_t)mPipeToArmInstMap);
 		if(mPipeToArmInstMap)
 			delete mPipeToArmInstMap;
 	}

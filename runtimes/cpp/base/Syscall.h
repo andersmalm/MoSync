@@ -31,7 +31,7 @@ Software Foundation, 59 Temple Place - Suite 330, Boston, MA
 #include <string>
 #endif
 
-#ifdef _android
+#if defined(_android) && !defined(LINUX)
 #include <jni.h>
 #endif
 

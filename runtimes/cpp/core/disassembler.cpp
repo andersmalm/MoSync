@@ -23,6 +23,8 @@ Software Foundation, 59 Temple Place - Suite 330, Boston, MA
 #include <stdarg.h>
 #endif
 
+#include "helpers/attribute.h"
+
 typedef unsigned char byte;
 typedef unsigned int uint;
 
@@ -41,6 +43,7 @@ __inline int write(char* buf, const char* fmt, ...) {
 }
 #else
 static char* sPtr;
+__inline void WRITE(const char* fmt, ...) GCCATTRIB(format(printf, 1, 2));
 __inline void WRITE(const char* fmt, ...) {
 	if(!sPtr) return;
 	va_list argptr;
@@ -60,6 +63,7 @@ __inline void WRITE(const char* fmt, ...) {
 #include "core_helpers.h"
 #include "CoreCommon.h"
 #include "gen-opcodes.h"
+#include "disassembler.h"
 
 #define FETCH_RD	rd = IB; WRITE(" rd%i", rd);
 #define FETCH_RS	rs = IB; WRITE(" rs%i", rs);
@@ -246,7 +250,7 @@ int disassemble_one ( const byte* ip,
 		} EOP;
 
 	default:
-		WRITE("Illegal instruction 0x%02X @ 0x%04X\n", op, (ip - mem_cs) - 1);
+		WRITE("Illegal instruction 0x%02x @ 0x%x\n", op, (int)((ip - mem_cs) - 1));
 		//BIG_PHAT_ERROR(ERR_ILLEGAL_INSTRUCTION);
 	}
 

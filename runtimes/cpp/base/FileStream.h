@@ -26,7 +26,7 @@ Software Foundation, 59 Temple Place - Suite 330, Boston, MA
 
 // platform specific
 
-#ifdef _android
+#if defined(_android) && !defined(LINUX)
 #include <jni.h>
 #endif
 
@@ -56,7 +56,7 @@ namespace Base {
 		virtual Stream* createCopy() const;
 
 		const char* getFilename() const;
-		
+
 		virtual bool truncate(int size) { FAIL; }
 
 #include "FileImpl.h"

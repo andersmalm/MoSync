@@ -15,12 +15,12 @@ Software Foundation, 59 Temple Place - Suite 330, Boston, MA
 02111-1307, USA.
 */
 
-#ifndef _BASE_STREAM_H_	
-#define _BASE_STREAM_H_	
+#ifndef _BASE_STREAM_H_
+#define _BASE_STREAM_H_
 
 #include <helpers/helpers.h>
 
-#ifdef _android
+#if defined(_android) && !defined(LINUX)
 #include <jni.h>
 #endif
 
@@ -98,4 +98,4 @@ namespace Base {
 
 } // namespace Base
 
-#endif // _BASE_STREAM_H_	
+#endif // _BASE_STREAM_H_

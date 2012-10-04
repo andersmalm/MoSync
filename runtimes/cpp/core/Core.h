@@ -39,7 +39,7 @@ typedef union _LARGE_INTEGER {
 #include <helpers/types.h>
 #include <helpers/helpers.h>
 
-#ifdef _android
+#if defined(_android) && !defined(LINUX)
 #include <jni.h>
 
 typedef unsigned short wchar;

@@ -499,7 +499,7 @@ namespace avmplus
 		if (verboseFlag)
 			console->format("    %A  bl%s    %A\n", mip, conditionCodes[conditionCode], offset24);
 #endif /* AVMPLUS_VERBOSE */
-		*mip++ = 0x0B000000 | (conditionCode<<28) | ((offset24-8)>>2)&0xFFFFFF;
+		*mip++ = 0x0B000000 | (conditionCode<<28) | (((offset24-8)>>2)&0xFFFFFF);
 		PRINT_LAST_INSTRUCTION();
 	}
 
@@ -510,7 +510,7 @@ namespace avmplus
 		if (verboseFlag)
 			console->format("    %A  b%s     %A\n", mip, conditionCodes[conditionCode], offset24);
 #endif /* AVMPLUS_VERBOSE */
-		*mip++ = 0x0A000000 | (conditionCode<<28) | ((offset24-8)>>2)&0xFFFFFF;
+		*mip++ = 0x0A000000 | (conditionCode<<28) | (((offset24-8)>>2)&0xFFFFFF);
 		PRINT_LAST_INSTRUCTION();
 	}
 
@@ -942,9 +942,9 @@ namespace avmplus
 		PRINT_LAST_INSTRUCTION();
 	}
 
-	void ArmAssembler::SET_CONDITION_CODE(ConditionCode conditionCode)
+	void ArmAssembler::SET_CONDITION_CODE(ConditionCode cc)
 	{
-		this->conditionCode = conditionCode;
+		this->conditionCode = cc;
 	}
 
 	void ArmAssembler::FMSR(FloatReg dst, Register src) {

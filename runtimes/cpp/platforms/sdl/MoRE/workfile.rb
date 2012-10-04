@@ -11,12 +11,13 @@ work.instance_eval do
 	setup_common
 
 	BD = '../../../../..'
-	@SOURCES = ["."]
-	@IGNORED_FILES = ["debugger.cpp"]
+	@SOURCES = [".", "#{BD}/runtimes/cpp/core/Recompiler"]
+	@IGNORED_FILES = ["debugger.cpp", 'ashmem.cpp']
 	@EXTRA_SOURCEFILES = ["#{BD}/runtimes/cpp/core/Core.cpp",
 		"#{BD}/runtimes/cpp/core/sld.cpp",
 		"#{BD}/runtimes/cpp/core/GdbStub.cpp",
 		"#{BD}/runtimes/cpp/core/extensions.cpp",
+		"#{BD}/runtimes/cpp/core/disassembler.cpp",
 		"#{BD}/intlibs/helpers/intutil.cpp",
 		]
 	@EXTRA_INCLUDES += ["../../.."]

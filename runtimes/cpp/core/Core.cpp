@@ -613,7 +613,7 @@ public:
 	void Run2() {
 #ifdef USE_ARM_RECOMPILER
 		//aIP = RunArm(aIP);
-		rIP = (byte*)recompiler.run((int)rIP);
+		rIP = (byte*)(size_t)recompiler.run((int)(size_t)rIP);
 #else
 		rIP = Run(rIP);
 #endif

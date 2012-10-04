@@ -41,9 +41,9 @@ typedef unsigned int uint32;
 #include "ArmAssembler.h"
 typedef avmplus::ArmAssembler AA;
 
-struct RegisterMapElement { 
-	int msReg; 
-	AA::Register armReg; 
+struct RegisterMapElement {
+	int msReg;
+	AA::Register armReg;
 };
 
 namespace MoSync {
@@ -87,7 +87,7 @@ namespace MoSync {
 #ifdef __SYMBIAN32__
 		SafeChunk mCodeChunk, mEntryChunk;
 #endif
-		
+
 #define REGISTER_ADDR AA::FP // pointer to gCore->regs
 
 #ifdef USE_ENVIRONMENT_REGISTERS
@@ -108,16 +108,16 @@ namespace MoSync {
 
 #define NUM_STATICALLY_ALLOCATED_REGISTERS 7
 
-	void loadEnvironmentRegisters(AA& assm) {
-		assm.MOV_imm32(MEMORY_ADDR(AA::Unknown), (int)mEnvironment.mem_ds);
-		assm.MOV_imm32(MEMORY_MASK(AA::Unknown), (int)mEnvironment.dataMask);
-		assm.MOV_imm32(PIPE_TO_ARM_MAP(AA::Unknown), (int)mPipeToArmInstMap, false);	
+	void loadEnvironmentRegisters(AA& _assm) {
+		_assm.MOV_imm32(MEMORY_ADDR(AA::Unknown), (int)mEnvironment.mem_ds);
+		_assm.MOV_imm32(MEMORY_MASK(AA::Unknown), (int)mEnvironment.dataMask);
+		_assm.MOV_imm32(PIPE_TO_ARM_MAP(AA::Unknown), (int)mPipeToArmInstMap, false);
 	}
 #else
 
-AA::Register MEMORY_ADDR(AA::Register temp) { assm.MOV_imm32(temp, (int)mEnvironment.mem_ds); return temp; }
+AA::Register MEMORY_ADDR(AA::Register temp) { assm.MOV_imm32(temp, (int)(size_t)mEnvironment.mem_ds); return temp; }
 AA::Register MEMORY_MASK(AA::Register temp) { assm.MOV_imm32(temp, (int)mEnvironment.dataMask); return temp; }
-AA::Register PIPE_TO_ARM_MAP(AA::Register temp) { assm.MOV_imm32(temp, (int) mPipeToArmInstMap); return temp; }
+AA::Register PIPE_TO_ARM_MAP(AA::Register temp) { assm.MOV_imm32(temp, (int)(size_t)mPipeToArmInstMap); return temp; }
 
 #define FREE_ARM_REGISTERS\
 	AA::Register freeArmRegisters[] = {\
@@ -127,7 +127,7 @@ AA::Register PIPE_TO_ARM_MAP(AA::Register temp) { assm.MOV_imm32(temp, (int) mPi
 	AA::R7,\
 	AA::R8 \
 }
-// Symbian can't recompile using any of the following registers AA::R9, AA::R10, AA::SP, AA::LR, AA::IP 
+// Symbian can't recompile using any of the following registers AA::R9, AA::R10, AA::SP, AA::LR, AA::IP
 
 #ifdef _android
 #define NUM_STATICALLY_ALLOCATED_REGISTERS 5
@@ -137,7 +137,7 @@ AA::Register PIPE_TO_ARM_MAP(AA::Register temp) { assm.MOV_imm32(temp, (int) mPi
 
 #define loadEnvironmentRegisters(x)
 #endif
-		
+
 
 		void beginInstruction(int ip);
 
