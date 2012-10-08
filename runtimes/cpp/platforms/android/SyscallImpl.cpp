@@ -1068,28 +1068,28 @@ namespace Base
 		mJNIEnv->DeleteLocalRef(cls);
 	}
 
-	SYSCALL(int,  maTime(void))
+	SYSCALL(longlong,  maTime(void))
 	{
 		SYSLOG("maTime");
 
 		jclass cls = mJNIEnv->GetObjectClass(mJThis);
 		jmethodID methodID = mJNIEnv->GetMethodID(cls, "maTime", "()I");
 		if (methodID == 0) ERROR_EXIT;
-		int retval = mJNIEnv->CallIntMethod(mJThis, methodID);
+		longlong retval = mJNIEnv->CallLongMethod(mJThis, methodID);
 
 		mJNIEnv->DeleteLocalRef(cls);
 
 		return retval;
 	}
 
-	SYSCALL(int,  maLocalTime(void))
+	SYSCALL(longlong,  maLocalTime(void))
 	{
 		SYSLOG("maLocalTime");
 
 		jclass cls = mJNIEnv->GetObjectClass(mJThis);
 		jmethodID methodID = mJNIEnv->GetMethodID(cls, "maLocalTime", "()I");
 		if (methodID == 0) ERROR_EXIT;
-		int retval = mJNIEnv->CallIntMethod(mJThis, methodID);
+		longlong retval = mJNIEnv->CallLongMethod(mJThis, methodID);
 
 		mJNIEnv->DeleteLocalRef(cls);
 
@@ -1321,7 +1321,7 @@ namespace Base
 	*				if this syscall is not implemented on this platfom.
 	*
 	*/
-	SYSCALL(int,  maIOCtl(int function, int a, int b, int c))
+	SYSCALL(longlong,  maIOCtl(int function, int a, int b, int c))
 	{
 		SYSLOG("maIOCtl");
 		//__android_log_write(ANDROID_LOG_INFO, "MoSync Syscall", "maIOCtl");
@@ -1764,7 +1764,7 @@ namespace Base
 			// the background during the time the maTextBox is running.
 			MAEvent event;
 			event.type = EVENT_TYPE_FOCUS_LOST;
-			event.data = NULL;
+			event.data = 0;
 			Base::gSyscall->postEvent(event);
 
 			// Get the two first parameters of the IOCtl function
