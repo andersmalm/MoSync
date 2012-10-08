@@ -41,12 +41,14 @@ work.instance_eval do
 
 	elsif(HOST == :darwin)
 		@IGNORED_FILES << "strptime.c"
-		@IGNORED_FILES << "OpenGLES.cpp"
-		@IGNORED_FILES << "OpenGLES2.cpp"
-		@EXTRA_INCLUDES = common_includes + ["/sw/include", "/opt/local/include"]
+		#@IGNORED_FILES << "OpenGLES.cpp"
+		#@IGNORED_FILES << "OpenGLES2.cpp"
+		@EXTRA_SOURCEFILES = ['../../../../intlibs/glew/src/glew.c']
+		@EXTRA_INCLUDES = common_includes + ["/sw/include", "/opt/local/include", "../../../../intlibs/glew/include"]
 		@LIBRARIES = common_libraries +["objc"]
 		@SPECIFIC_CFLAGS = {"SDL_prim.c" => " -Wno-float-equal -Wno-unreachable-code -D_ANSI_SOURCE",
-			"Syscall.cpp" => " -Wno-float-equal"}
+			"Syscall.cpp" => " -Wno-float-equal", "glew.c" => " -Wno-attributes -Wno-error -DGLEW_STATIC"}
+
 	else
 		error "Unsupported platform"
 	end

@@ -39,6 +39,8 @@ typedef	int Elf32_Sword;
 typedef uint32_t Elf64_Word;
 typedef	int Elf64_Sword;
 
+typedef signed int __int64;
+
 /* Types for signed and unsigned 64-bit quantities.  */
 typedef uint64_t Elf32_Xword;
 typedef	__int64 Elf32_Sxword;

@@ -22,6 +22,7 @@ require "#{File.dirname(__FILE__)}/loader_md.rb"
 require "#{File.dirname(__FILE__)}/flags.rb"
 
 def get_gcc_version_info(gcc)
+	printf gcc
 	puts "get_gcc_version_string(#{gcc})" if(PRINT_GCC_VERSION_INFO)
 	info = {}
 	file = open("|#{gcc} -v 2>&1")
