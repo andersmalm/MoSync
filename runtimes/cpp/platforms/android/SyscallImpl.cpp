@@ -1075,7 +1075,7 @@ namespace Base
 		jclass cls = mJNIEnv->GetObjectClass(mJThis);
 		jmethodID methodID = mJNIEnv->GetMethodID(cls, "maTime", "()I");
 		if (methodID == 0) ERROR_EXIT;
-		int retval = mJNIEnv->CallIntMethod(mJThis, methodID);
+		longlong retval = mJNIEnv->CallLongMethod(mJThis, methodID);
 
 		mJNIEnv->DeleteLocalRef(cls);
 
@@ -1089,7 +1089,7 @@ namespace Base
 		jclass cls = mJNIEnv->GetObjectClass(mJThis);
 		jmethodID methodID = mJNIEnv->GetMethodID(cls, "maLocalTime", "()I");
 		if (methodID == 0) ERROR_EXIT;
-		int retval = mJNIEnv->CallIntMethod(mJThis, methodID);
+		longlong retval = mJNIEnv->CallLongMethod(mJThis, methodID);
 
 		mJNIEnv->DeleteLocalRef(cls);
 

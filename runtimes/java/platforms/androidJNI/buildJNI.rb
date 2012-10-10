@@ -20,12 +20,13 @@ require '../../../../rules/util.rb'
 
 include FileUtils::Verbose
 
-# usage: buildJNI.rb <ANDROID_NDK_PATH> <ANDROID_SDK_PATH> <CONFIG_PATH> <DEBUG>
+# usage: buildJNI.rb <ANDROID_NDK_PATH> <ANDROID_SDK_PATH> <CONFIG_PATH> <DEBUG> [gdb]
 
 # <ANDROID_NDK_PATH> 	: The path to where the ndk is located i.e. C:/Android/android-ndk-r4
 # <ANDROID_SDK_PATH> 	: The path to where the sdk and the used platform is located i.e. C:/Android/android-sdk-windows/platforms/android-3 for cupcake 1.5
 # <CONFIG_PATH>			: The path to where the config.h is located. If this is set the finished runtime will end up in this folder as well, other wise it will be in the project source root
 # <DEBUG>				: If this is set to anything they will use the configD.h file which is supposed to be at the <CONFIG_PATH>
+# [gdb] If this is set, the runtime will be built for ndk-gdb.
 
 def exitBuilder(arg, configDir, config)
 	if config != nil
@@ -54,6 +55,11 @@ androidSDKTools = ARGV[2]
 configPath = ARGV[3]
 androidVersion = ARGV[4]
 debugFlag = ARGV[5]
+gdb = ARGV[6]
+
+if(gdb && gdb != 'gdb')
+	raise "Invalid gdb flag: #{gdb}"
+end
 
 
 if ENV['MOSYNC_SRC'] == nil
@@ -233,6 +239,19 @@ FileUtils.copy_file( "#{File.join(cpath, "AndroidProject/libs/armeabi/libmosync.
 puts "Copy external Library Files\n\n"
 FileUtils.copy_file( "#{File.join(cpath, "AndroidProject/libs/GoogleAdMobAdsSdk.jar")}", "temp/GoogleAdMobAdsSdk.jar")
 FileUtils.copy_file( "#{File.join(cpath, "AndroidProject/libs/gcm.jar")}", "temp/gcm.jar")
+
+if(gdb)
+	FileUtils.copy_file( "#{File.join(cpath, "AndroidProject/libs/armeabi/gdbserver")}", "temp/gdbserver")
+	FileUtils.copy_file( "#{File.join(cpath, "AndroidProject/libs/armeabi/gdb.setup")}", "temp/gdb.setup")
+	sh "java -jar C:/mosync/bin/android/dx.jar --dex --output=temp/classes.dex temp"
+	sh "java -jar C:/mosync/bin/android/apkbuilder.jar temp/MoSync_unsigned.apk -u -z resources.ap_ -f temp/classes.dex"+
+		" -f temp/gdbserver -f temp/gdb.setup"
+	sh "java -jar C:/mosync/bin/android/tools-stripped.jar"+
+		" -keystore C:/mosync/etc/mosync.keystore -storepass default -keypass default"+
+		" -signedjar temp/MoSync.apk temp/MoSync_unsigned.apk mosync.keystore"
+	sh "adb install -r temp\MoSync.apk"
+	exit(0)
+end
 
 puts "Build Zip Package\n\n"
 

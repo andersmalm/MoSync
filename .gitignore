@@ -210,6 +210,8 @@ wormhole.js
 /runtimes/java/platforms/androidJNI/AndroidProject/gen/
 /runtimes/java/platforms/androidJNI/AndroidProject/src/com/mosync/java/android/R.java
 
+/runtimes/java/platforms/androidJNI/temp/
+
 /tests/libc-suite/settings.rb
 /tests/libc-suite/_masterdump.s
 /tests/libc-suite/filesystem

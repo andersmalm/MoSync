@@ -2357,11 +2357,11 @@ interface MAAPI {
 			*/
 			//int timeMillis;
 
+			float alt;
 			double lat;
 			double lon;
 			double horzAcc;
 			double vertAcc;
-			float alt;
 		}
 
 		constset int MA_LOC_ {

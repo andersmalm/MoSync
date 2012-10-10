@@ -90,6 +90,7 @@ class Mapip2LibTask < NativeLibTask
 	def initialize(work, name, objects, libs, linkflags)
 		super(work, name, objects + libs)
 		@FLAGS = linkflags
+		@ar = "#{mosyncdir}/libexec/gcc/mapip2/4.6.3/ar"
 	end
 end
 
