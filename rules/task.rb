@@ -352,12 +352,12 @@ class MultiFileTask < FileTask
 		return false
 	end
 
-	# Returns the timestamp of the newest file.
+	# Returns the timestamp of the oldest file.
 	def timestamp
 		time = super
 		@files.each do |file|
 			t = self.class.timestamp(file)
-			time = t if(t > time)
+			time = t if(t < time)
 		end
 		return time
 	end

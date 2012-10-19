@@ -184,6 +184,7 @@ sh( "#{File.join(androidSDKTools, "/aapt")} package -f -v " +
 	"-I #{File.join(androidSDKPath, "android.jar")} " +
 	"-I #{File.join("#{package_root}libs/", "GoogleAdMobAdsSdk.jar")} " +
 	"-S #{File.join(package_root, "res")} " +
+	"-A #{File.join(package_root, "assets")} " +
 	"-m -J #{File.join(package_root, "gen")}");
 
 puts "Compiling Java Source Files\n\n"
@@ -243,13 +244,16 @@ FileUtils.copy_file( "#{File.join(cpath, "AndroidProject/libs/gcm.jar")}", "temp
 if(gdb)
 	FileUtils.copy_file( "#{File.join(cpath, "AndroidProject/libs/armeabi/gdbserver")}", "temp/gdbserver")
 	FileUtils.copy_file( "#{File.join(cpath, "AndroidProject/libs/armeabi/gdb.setup")}", "temp/gdb.setup")
-	sh "java -jar C:/mosync/bin/android/dx.jar --dex --output=temp/classes.dex temp"
-	sh "java -jar C:/mosync/bin/android/apkbuilder.jar temp/MoSync_unsigned.apk -u -z resources.ap_ -f temp/classes.dex"+
+	sh "java -jar #{mosyncdir}/bin/android/dx.jar --dex --output=temp/classes.dex temp"
+	sh "java -jar #{mosyncdir}/bin/android/apkbuilder.jar temp/MoSync_unsigned.apk -u -z resources.ap_ -f temp/classes.dex"+
 		" -f temp/gdbserver -f temp/gdb.setup"
-	sh "java -jar C:/mosync/bin/android/tools-stripped.jar"+
-		" -keystore C:/mosync/etc/mosync.keystore -storepass default -keypass default"+
+	sh "java -jar #{mosyncdir}/bin/android/tools-stripped.jar"+
+		" -keystore #{mosyncdir}/etc/mosync.keystore -storepass default -keypass default"+
 		" -signedjar temp/MoSync.apk temp/MoSync_unsigned.apk mosync.keystore"
-	sh "adb install -r temp\MoSync.apk"
+	sh "adb install -r temp/MoSync.apk"
+	sh "adb push temp/gdbserver /data/data/com.mosync.java.android/lib/"
+	sh "adb push temp/gdb.setup /data/data/com.mosync.java.android/lib/"
+	sh "adb push temp/libmosync.so /data/data/com.mosync.java.android/lib/"
 	exit(0)
 end
 

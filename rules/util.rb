@@ -179,6 +179,15 @@ class LateTime
 end
 LATE = LateTime.instance
 
+class Time
+	alias_method(:old_comp, :<=>)
+	def <=>(other)
+		return 1 if(other.instance_of?(EarlyTime))
+		return -1 if(other.instance_of?(LateTime))
+		return old_comp(other)
+	end
+end
+
 # Extension to class File, to make sure that the drive letter is always lowercase.
 # This resolves an issue where programs were rebuilt due to file paths being changed,
 # itself due to strange behaviour in the Windows command-line console.

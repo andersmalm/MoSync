@@ -50,7 +50,7 @@ int _androidEntryMemSize;
 JNIEnv* mJNIEnv;
 jobject mJThis;
 
-int mAshmemCodeMemory = -1;
+//int mAshmemCodeMemory = -1;
 int mAshmemEntryPoint = -1;
 
 #endif
@@ -288,6 +288,8 @@ int mAshmemEntryPoint = -1;
 		return mEntryChunk.allocate(size);
 #elif defined(_android)
 
+		//sleep(5);
+
 		int alignedSize = size;//alignMemorySize(size);
 
 		mAshmemEntryPoint = ashmem_create_region("mosync_ashmem_entry_point", alignedSize);
@@ -498,21 +500,14 @@ namespace MoSync {
 
 
 	AA::Register ArmRecompiler::findStaticRegister(int msReg) {
-	#ifdef NO_STATIC_REGISTERS
-		return AA::Unknown;
-	#endif
-
+	#ifndef NO_STATIC_REGISTERS
 		for(int i = 0; i < NUM_STATICALLY_ALLOCATED_REGISTERS; i++) {
 			if(registerMapping[i].msReg == msReg) {
 				return registerMapping[i].armReg;
 			}
 		}
-
+	#endif
 		return AA::Unknown;
-	}
-
-	AA::Register ArmRecompiler::getStaticRegister(int i) {
-		return registerMapping[i].armReg;
 	}
 
 	void ArmRecompiler::saveStaticRegister(AA &_assm, int i) {
@@ -580,10 +575,27 @@ namespace MoSync {
 		}
 	}
 
-	AA::Register ArmRecompiler::loadDIRegister(int msreg) {
-		AA::Register armreg = getDITempRegister();
-		assm.LDRD(armreg, ((msreg)<<2), REGISTER_ADDR);
+	AA::Register ArmRecompiler::loadDIRegister(int msreg, AA::Register armreg) {
+		AA::Register r0 = findStaticRegister(msreg), r1 = findStaticRegister(msreg+1);
+		if(r0 == AA::Unknown && r1 == AA::Unknown) {	// both are not static. load di.
+			assm.LDRD(armreg, ((msreg)<<2), REGISTER_ADDR);
+		} else if(r1 == (r0 + 1)) {	// both are static are contigous. we can use them directly.
+			return r0;
+		} else {	// at least one is static, but they are not contigous. load them separately.
+			loadRegister(msreg, armreg, true);
+			loadRegister(msreg+1, (AA::Register)(armreg+1), true);
+		}
 		return armreg;
+	}
+
+	void ArmRecompiler::saveDIRegister(int msreg, AA::Register armreg) {
+		AA::Register r0 = findStaticRegister(msreg), r1 = findStaticRegister(msreg+1);
+		if(r0 == AA::Unknown && r1 == AA::Unknown) {	// both are not static. save di.
+			assm.STRD(armreg, ((msreg)<<2), REGISTER_ADDR);
+		} else {	// at least one is static. save separately.
+			saveRegister(msreg, armreg);
+			saveRegister(msreg+1, (AA::Register)(armreg+1));
+		}
 	}
 
 	AA::DoubleReg ArmRecompiler::loadDoubleReg(int msreg) {
@@ -605,6 +617,7 @@ namespace MoSync {
 		assm.FSTD(armreg, FLOAT_REG_OFFSET + (msreg << 3), REGISTER_ADDR);
 	}
 
+#if 0
 	AA::Register ArmRecompiler::loadRegister(int msreg) {
 		DEBUG_ASSERT(mRegisterAlloc <= AA::R10);
 		return loadRegister(msreg, (AA::Register)mRegisterAlloc++);
@@ -637,9 +650,7 @@ namespace MoSync {
 		return ar;
 	}
 
-	void ArmRecompiler::saveDIRegister(int mosync_reg, AA::Register arm_r) {
-		assm.STRD(arm_r, ((mosync_reg)<<2), REGISTER_ADDR);
-	}
+#endif
 
 	AA::FloatReg ArmRecompiler::getFloatTempReg() {
 		DEBUG_ASSERT(mDoubleRegAlloc <= AA::DR15);
@@ -1269,6 +1280,7 @@ namespace MoSync {
 	void ArmRecompiler::visit_BREAK() {
 		if(I.rd != 0xff)	// avoid gcc warning
 		DEBIG_PHAT_ERROR;
+
 	}
 
 	void ArmRecompiler::visit_LDDR() {
@@ -1297,7 +1309,7 @@ namespace MoSync {
 	void ArmRecompiler::visit_FLOATS() {
 		AA::DoubleReg sr = getSaveDoubleReg(I.rd);
 		AA::FloatReg temp = getFloatTempReg();
-		assm.FMSR(temp, loadRegister(I.rs));
+		assm.FMSR(temp, loadRegister(I.rs, AA::R1));
 		assm.FSITOD(sr, temp);
 		saveDoubleReg(I.rd, sr);
 	}
@@ -1305,7 +1317,7 @@ namespace MoSync {
 	void ArmRecompiler::visit_FLOATUNS() {
 		AA::DoubleReg sr = getSaveDoubleReg(I.rd);
 		AA::FloatReg temp = getFloatTempReg();
-		assm.FMSR(temp, loadRegister(I.rs));
+		assm.FMSR(temp, loadRegister(I.rs, AA::R1));
 		assm.FUITOD(sr, temp);
 		saveDoubleReg(I.rd, sr);
 	}
@@ -1333,7 +1345,7 @@ namespace MoSync {
 	}
 
 	void ArmRecompiler::visit_FSTRS() {
-		AA::Register sr = getSaveRegister(I.rd);
+		AA::Register sr = getSaveRegister(I.rd, AA::R1);
 		AA::FloatReg temp = getFloatTempReg();
 		assm.FCVTSD(temp, loadDoubleReg(I.rs));
 		assm.FMRS(sr, temp);
@@ -1341,7 +1353,7 @@ namespace MoSync {
 	}
 
 	void ArmRecompiler::visit_FSTRD() {
-		AA::Register sr = getDISaveRegister(I.rd);
+		AA::Register sr = AA::R2;
 		assm.FMRRD(sr, loadDoubleReg(I.rs));
 		saveDIRegister(I.rd, sr);
 	}
@@ -1349,14 +1361,14 @@ namespace MoSync {
 	void ArmRecompiler::visit_FLDRS() {
 		AA::DoubleReg sr = getSaveDoubleReg(I.rd);
 		AA::FloatReg temp = getFloatTempReg();
-		assm.FMSR(temp, loadRegister(I.rs));
+		assm.FMSR(temp, loadRegister(I.rs, AA::R2));
 		assm.FCVTDS(sr, temp);
 		saveDoubleReg(I.rd, sr);
 	}
 
 	void ArmRecompiler::visit_FLDRD() {
 		AA::DoubleReg sr = getSaveDoubleReg(I.rd);
-		assm.FMDRR(sr, loadDIRegister(I.rs));
+		assm.FMDRR(sr, loadDIRegister(I.rs, AA::R2));
 		saveDoubleReg(I.rd, sr);
 	}
 
@@ -1369,7 +1381,7 @@ namespace MoSync {
 	void ArmRecompiler::visit_FLDIS() {
 		AA::DoubleReg sr = getSaveDoubleReg(I.rd);
 		AA::FloatReg tempf = getFloatTempReg();
-		AA::Register tempi = getTempRegister();
+		AA::Register tempi = AA::R2;
 		assm.MOV_imm32(tempi, I.imm);
 		assm.FMSR(tempf, tempi);
 		assm.FCVTDS(sr, tempf);
@@ -1378,14 +1390,14 @@ namespace MoSync {
 
 	void ArmRecompiler::visit_FLDID() {
 		AA::DoubleReg sr = getSaveDoubleReg(I.rd);
-		AA::Register tempi = getDITempRegister();
+		AA::Register tempi = AA::R2;
 		assm.MOV_imm64(tempi, I.imm, I.imm2);
 		assm.FMDRR(sr, tempi);
 		saveDoubleReg(I.rd, sr);
 	}
 
 	void ArmRecompiler::visit_FIX_TRUNCS() {
-		AA::Register sr = getSaveRegister(I.rd);
+		AA::Register sr = getSaveRegister(I.rd, AA::R2);
 		AA::FloatReg temp = getFloatTempReg();
 		assm.FTOSID(temp, loadDoubleReg(I.rs));
 		assm.FMRS(sr, temp);
@@ -1393,7 +1405,7 @@ namespace MoSync {
 	}
 
 	void ArmRecompiler::visit_FIXUN_TRUNCS() {
-		AA::Register sr = getSaveRegister(I.rd);
+		AA::Register sr = getSaveRegister(I.rd, AA::R2);
 		AA::FloatReg temp = getFloatTempReg();
 		assm.FTOUID(temp, loadDoubleReg(I.rs));
 		assm.FMRS(sr, temp);
@@ -1524,11 +1536,11 @@ namespace MoSync {
 
 	void ArmRecompiler::visit_STD() {
 		LOAD_ADDR_TO_R3(I.rd, I.imm, int);
-		assm.STM(AA::R3, 3 << loadDIRegister(I.rs));
+		assm.STM(AA::R3, 3 << loadDIRegister(I.rs, AA::R2));
 	}
 
 	void ArmRecompiler::visit_LDD() {
-		AA::Register sr = getDISaveRegister(I.rd);
+		AA::Register sr =AA::R2;
 		LOAD_ADDR_TO_R3(I.rs, I.imm, int);
 		assm.LDM(AA::R3, 3 << sr);
 		saveDIRegister(I.rd, sr);
@@ -1681,7 +1693,7 @@ namespace MoSync {
 
 	void ArmRecompiler::beginInstruction(int ip) {
 		mDoubleRegAlloc = AA::FR0;
-		mRegisterAlloc = AA::R4;
+		//mRegisterAlloc = AA::R4;
 		if(mPass==1) {
 			// reset
 			assm.mip = tempInst;
@@ -1738,8 +1750,8 @@ namespace MoSync {
 		sprintf(b, "entry point fd %i\n", mAshmemEntryPoint);
 		__android_log_write(ANDROID_LOG_INFO, "JNI Recompiler", b);
 
-		sprintf(b, "code memory fd %i\n", mAshmemCodeMemory);
-		__android_log_write(ANDROID_LOG_INFO, "JNI Recompiler", b);
+		//sprintf(b, "code memory fd %i\n", mAshmemCodeMemory);
+		//__android_log_write(ANDROID_LOG_INFO, "JNI Recompiler", b);
 
 		sprintf(b, "entryPoint.mipstart %i (%x) ip %i (%x)\n", entryPoint.mipStart, entryPoint.mipStart,  ip, ip);
 		__android_log_write(ANDROID_LOG_INFO, "JNI Recompiler", b);

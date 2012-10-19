@@ -708,7 +708,8 @@ public:
 		InstCount = 0;
 #endif
 
-		regs[0] = 0;
+		//regs[0] = 0;
+		memset(regs, 0, sizeof(regs));
 
 #ifdef FAKE_CALL_STACK
 		resetFakeCallStack();

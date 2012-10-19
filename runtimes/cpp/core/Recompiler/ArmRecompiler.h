@@ -179,26 +179,28 @@ AA::Register PIPE_TO_ARM_MAP(AA::Register temp) { assm.MOV_imm32(temp, (int)(siz
 
 
 		AA::Register findStaticRegister(int msReg);
-		AA::Register getStaticRegister(int i);
+		//AA::Register getStaticRegister(int i);
 		void saveStaticRegister(AA &assm, int i);
 		void loadStaticRegister(AA &assm, int i);
 		void saveStaticRegisters(AA &assm);
 		void loadStaticRegisters(AA &assm);
 		AA::Register getSaveRegister(int mosync_reg, AA::Register arm_r);
 		void saveRegister(int mosync_reg, AA::Register arm_r);
-		AA::Register getSaveRegister(int mosync_reg);
+
+		//AA::Register getSaveRegister(int mosync_reg);
 		AA::Register loadRegister(int msreg, AA::Register armreg, bool shouldCopy=false);
-		AA::Register loadRegister(int msreg);
+		//AA::Register loadRegister(int msreg);
 
 		AA::FloatReg getFloatTempReg();
 		AA::DoubleReg getSaveDoubleReg(int mosync_reg);
 		AA::DoubleReg loadDoubleReg(int mosync_reg);
 		void saveDoubleReg(int mosync_reg, AA::DoubleReg);
-		AA::Register getDISaveRegister(int mosync_reg);
+
 		void saveDIRegister(int mosync_reg, AA::Register);
-		AA::Register loadDIRegister(int mosync_reg);
-		AA::Register getTempRegister();
-		AA::Register getDITempRegister();
+		//AA::Register getDISaveRegister(int mosync_reg, AA::Register arm_r);
+		AA::Register loadDIRegister(int mosync_reg, AA::Register arm_r);
+		/*AA::Register getTempRegister();
+		AA::Register getDITempRegister();*/
 
 		void floatd(int,int);
 		void floatund(int,int);
@@ -225,7 +227,8 @@ AA::Register PIPE_TO_ARM_MAP(AA::Register temp) { assm.MOV_imm32(temp, (int)(siz
 		// Number of the next register to allocate.
 		// Resets every instruction.
 		int mDoubleRegAlloc;	// start at DR0.
-		int mRegisterAlloc;	// start at R4.
+
+		//int mRegisterAlloc;	// start at R4.
 
 		AA::MDInstruction tempInst[512];
 

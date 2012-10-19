@@ -5,10 +5,7 @@ require "#{File.dirname(__FILE__)}/mosync_util.rb"
 lc = "#{File.dirname(__FILE__)}/local_config.rb"
 require lc if(File.exists?(lc))
 
-#puts "MOSYNCDIR = " + ENV['MOSYNCDIR'] + "\n"
-#puts "mosync_util.rb =" + "#{File.dirname(__FILE__)}/mosync_util.rb" + "\n"
-#puts "MOSYNCDIR=" + mosyncdir + "\n"
-
+default_const(:USE_ARM, false)
 default_const(:USE_GCC_VERSION_IN_BUILDDIR_NAME, true)
 default_const(:GCC_PIPE_EXTRA_FLAGS, ' -pipe')
 default_const(:PRINT_FLAG_CHANGES, false)

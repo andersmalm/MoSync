@@ -72,6 +72,7 @@ namespace Base {
 
 	uint getMaxCustomEventSize() {
 		#define COUNT_CUSTOM_EVENT(eventType, dataType)\
+			LOG("sizeof(%s): 0x%" PFZT "\n", #dataType, sizeof(dataType));\
 			if(maxCustomEventSize < sizeof(dataType)) maxCustomEventSize = sizeof(dataType);
 
 		uint maxCustomEventSize = 0;
