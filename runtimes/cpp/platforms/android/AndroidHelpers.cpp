@@ -24,52 +24,13 @@ Software Foundation, 59 Temple Place - Suite 330, Boston, MA
 
 #if 1//def LOGGING_ENABLED
 
-static const char* sFilename = "log.txt";
-
 void InitLog(const char* filenameOverride) {
-/*	static bool done = false;
-	if(done)
-		return;
-	done = true;
-
-	if(filenameOverride != NULL) {
-		sFilename = filenameOverride;
-	}
-
-	FILE* file = fopen(sFilename, "w");
-	if(!file)
-		MoSyncErrorExit(MoSyncError::ERR_INTERNAL);
-	fclose(file);
-*/
-/*	
-	InitializeCriticalSection(&gLogCS);
-
-	DEBUG_ASSERT(QueryPerformanceFrequency(&sFrequency));
-	Log("PerformanceFrequency: %I64i\n", sFrequency.QuadPart);
-	DEBUG_ASSERT(QueryPerformanceCounter(&sStartCount));
-	Log("StartCount: %I64i\n", sStartCount.QuadPart);
-*/	
 }
 
 void LogV(const char* fmt, va_list args) {
-/*
-	int res;
-	InitLog();
-//	EnterCriticalSection(&gLogCS);
-	{
-		FILE* file = fopen(sFilename, "a");
-		if(!file) {
-			res = -1;
-		} else {
-			res = vfprintf(file, fmt, args);
-			fclose(file);
-		}
-	}
-//	LeaveCriticalSection(&gLogCS);
-
-	if(res < 0)
-		MoSyncErrorExit(MoSyncError::ERR_INTERNAL);
-*/
+	char buf[2048];
+	vsprintf(buf, fmt, args);
+	__android_log_write(ANDROID_LOG_INFO, "JNI Recompiler", buf);
 }
 
 #endif

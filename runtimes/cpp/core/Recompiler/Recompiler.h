@@ -362,6 +362,10 @@ endOfFunction:
 					//InstructionPatternNode* node = 0;
 					//if(!node) {
 						(thisImpl->*defaultVisitors[mInstructions[0].op])();
+#if 1	// extra DEBUG
+						if(mInstructions[0].op != OP_RET)
+							thisImpl->returnFromRecompiledCode();
+#endif
 						ip+=mInstructions[0].length;
 						for(int i = 1; i < numInstructions; i++) {
 							mInstructions[i-1] = mInstructions[i];

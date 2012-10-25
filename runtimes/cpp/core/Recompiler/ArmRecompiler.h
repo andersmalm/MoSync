@@ -82,6 +82,8 @@ namespace MoSync {
 #endif
 		void close();
 
+		void returnFromRecompiledCode();
+
 	protected:
 
 #ifdef __SYMBIAN32__
@@ -113,7 +115,7 @@ namespace MoSync {
 		_assm.MOV_imm32(MEMORY_MASK(AA::Unknown), (int)mEnvironment.dataMask);
 		_assm.MOV_imm32(PIPE_TO_ARM_MAP(AA::Unknown), (int)mPipeToArmInstMap, false);
 	}
-#else
+#else	//!USE_ENVIRONMENT_REGISTERS
 
 AA::Register MEMORY_ADDR(AA::Register temp) { assm.MOV_imm32(temp, (int)(size_t)mEnvironment.mem_ds); return temp; }
 AA::Register MEMORY_MASK(AA::Register temp) { assm.MOV_imm32(temp, (int)mEnvironment.dataMask); return temp; }
@@ -167,7 +169,8 @@ AA::Register PIPE_TO_ARM_MAP(AA::Register temp) { assm.MOV_imm32(temp, (int)(siz
 		void saveStackPointer(AA &assm, AA::Register temp);
 		void loadStackPointer(AA &assm, AA::Register temp);
 		void generateEntryPoint();
-		void returnFromRecompiledCode();
+		void returnFromRecompiledCode(AA&);
+		void returnFromRecompiledCodeR0();
 
 #ifdef LOG_STATE_CHANGE
 		void logStateChange(int ip);

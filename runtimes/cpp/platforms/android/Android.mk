@@ -20,9 +20,11 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE    := mosync
 LOCAL_ARM_MODE  := arm
-LOCAL_SRC_FILES := FileImpl.cpp \
+LOCAL_SRC_FILES := \
+	../../core/Recompiler/ArmRecompiler.cpp \
 	../../../../intlibs/helpers/platforms/linux/log.cpp \
 	../sdl/FileImpl.cpp \
+	FileImpl.cpp \
 	MoSyncBridge.cpp \
 	AndroidHelpers.cpp \
 	SyscallImpl.cpp \
@@ -36,7 +38,6 @@ LOCAL_SRC_FILES := FileImpl.cpp \
 	../../core/Core.cpp \
 	../../core/disassembler.cpp \
 	../../core/Recompiler/ArmAssembler.cpp \
-	../../core/Recompiler/ArmRecompiler.cpp \
 	../../../../intlibs/hashmap/hashmap.cpp \
 	../../core/Recompiler/ashmem.cpp \
 

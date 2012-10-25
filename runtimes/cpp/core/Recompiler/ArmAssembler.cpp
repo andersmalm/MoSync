@@ -947,50 +947,52 @@ namespace avmplus
 		this->conditionCode = cc;
 	}
 
+#define CC (conditionCode<<28)
+
 	void ArmAssembler::FMSR(FloatReg dst, Register src) {
 		incInstructionCount();
-		*mip++ = 0x0E000A10 | ((dst >> 1) << 16) | ((dst & 1) << 7) | (src << 12);
+		*mip++ = 0x0E000A10 | CC | ((dst >> 1) << 16) | ((dst & 1) << 7) | (src << 12);
 		PRINT_LAST_INSTRUCTION();
 	}
 	void ArmAssembler::FMRS(Register dst, FloatReg src) {
 		incInstructionCount();
-		*mip++ = 0x0E100A10 | ((src >> 1) << 16) | ((src & 1) << 7) | (dst << 12);
+		*mip++ = 0x0E100A10 | CC | ((src >> 1) << 16) | ((src & 1) << 7) | (dst << 12);
 		PRINT_LAST_INSTRUCTION();
 	}
 
 	void ArmAssembler::FSITOD(DoubleReg dst, FloatReg src) {
 		incInstructionCount();
-		*mip++ = 0x0EB80BC0 | (src >> 1) | ((src & 1) << 5) | (dst << 12);
+		*mip++ = 0x0EB80BC0 | CC | (src >> 1) | ((src & 1) << 5) | (dst << 12);
 		PRINT_LAST_INSTRUCTION();
 	}
 	void ArmAssembler::FUITOD(DoubleReg dst, FloatReg src) {
 		incInstructionCount();
-		*mip++ = 0x0EB80B40 | (src >> 1) | ((src & 1) << 5) | (dst << 12);
+		*mip++ = 0x0EB80B40 | CC | (src >> 1) | ((src & 1) << 5) | (dst << 12);
 		PRINT_LAST_INSTRUCTION();
 	}
 	void ArmAssembler::FCVTSD(FloatReg dst, DoubleReg src) {
 		incInstructionCount();
-		*mip++ = 0x0EB70BC0 | ((dst >> 1) << 12) | ((dst & 1) << 22) | src;
+		*mip++ = 0x0EB70BC0 | CC | ((dst >> 1) << 12) | ((dst & 1) << 22) | src;
 		PRINT_LAST_INSTRUCTION();
 	}
 	void ArmAssembler::FCVTDS(DoubleReg dst, FloatReg src) {
 		incInstructionCount();
-		*mip++ = 0x0EB70AC0 | (src >> 1) | ((src & 1) << 5) | (dst << 12);
+		*mip++ = 0x0EB70AC0 | CC | (src >> 1) | ((src & 1) << 5) | (dst << 12);
 		PRINT_LAST_INSTRUCTION();
 	}
 	void ArmAssembler::FMRRD(Register dst, DoubleReg src) {
 		incInstructionCount();
-		*mip++ = 0x0C500B10 | src | (dst << 12) | ((dst + 1) << 16);
+		*mip++ = 0x0C500B10 | CC | src | (dst << 12) | ((dst + 1) << 16);
 		PRINT_LAST_INSTRUCTION();
 	}
 	void ArmAssembler::FMDRR(DoubleReg dst, Register src) {
 		incInstructionCount();
-		*mip++ = 0x0C400B10 | dst | (src << 12) | ((src + 1) << 16);
+		*mip++ = 0x0C400B10 | CC | dst | (src << 12) | ((src + 1) << 16);
 		PRINT_LAST_INSTRUCTION();
 	}
 	void ArmAssembler::FCPYD(DoubleReg dst, DoubleReg src) {
 		incInstructionCount();
-		*mip++ = 0x0EB00B40 | src | (dst << 12);
+		*mip++ = 0x0EB00B40 | CC | src | (dst << 12);
 		PRINT_LAST_INSTRUCTION();
 	}
 	void ArmAssembler::MOV_imm64(Register dst, int imm, int imm2) {
@@ -1000,21 +1002,21 @@ namespace avmplus
 	}
 	void ArmAssembler::FTOSID(FloatReg dst, DoubleReg src) {
 		incInstructionCount();
-		*mip++ = 0x0EBD0B40 | ((dst >> 1) << 12) | ((dst & 1) << 22) | src;
+		*mip++ = 0x0EBD0B40 | CC | ((dst >> 1) << 12) | ((dst & 1) << 22) | src;
 		PRINT_LAST_INSTRUCTION();
 	}
 	void ArmAssembler::FTOUID(FloatReg dst, DoubleReg src) {
 		incInstructionCount();
-		*mip++ = 0x0EBC0B40 | ((dst >> 1) << 12) | ((dst & 1) << 22) | src;
+		*mip++ = 0x0EBC0B40 | CC | ((dst >> 1) << 12) | ((dst & 1) << 22) | src;
 		PRINT_LAST_INSTRUCTION();
 	}
 
 	void ArmAssembler::FmemMov(int opcode, int offset, Register r) {
 		incInstructionCount();
-		int U = ((~offset) >> 31);
+		int U = ((~(unsigned)offset) >> 31);
 		int absOffset = abs(offset);
 		AvmAssert(absOffset <= 0xFF);
-		*mip++ = opcode | (r << 16) | (U << 23) | absOffset;
+		*mip++ = opcode | CC | (r << 16) | (U << 23) | absOffset;
 		PRINT_LAST_INSTRUCTION();
 	}
 
@@ -1040,48 +1042,48 @@ namespace avmplus
 
 	void ArmAssembler::FADDD(DoubleReg dst, DoubleReg a, DoubleReg b) {
 		incInstructionCount();
-		*mip++ = 0x0E300B00 | (dst << 12) | (a << 16) | b;
+		*mip++ = 0x0E300B00 | CC | (dst << 12) | (a << 16) | b;
 		PRINT_LAST_INSTRUCTION();
 	}
 	void ArmAssembler::FSUBD(DoubleReg dst, DoubleReg a, DoubleReg b) {
 		incInstructionCount();
-		*mip++ = 0x0E300B40 | (dst << 12) | (a << 16) | b;
+		*mip++ = 0x0E300B40 | CC | (dst << 12) | (a << 16) | b;
 		PRINT_LAST_INSTRUCTION();
 	}
 	void ArmAssembler::FMULD(DoubleReg dst, DoubleReg a, DoubleReg b) {
 		incInstructionCount();
-		*mip++ = 0x0E200B00 | (dst << 12) | (a << 16) | b;
+		*mip++ = 0x0E200B00 | CC | (dst << 12) | (a << 16) | b;
 		PRINT_LAST_INSTRUCTION();
 	}
 	void ArmAssembler::FDIVD(DoubleReg dst, DoubleReg a, DoubleReg b) {
 		incInstructionCount();
-		*mip++ = 0x0E800B00 | (dst << 12) | (a << 16) | b;
+		*mip++ = 0x0E800B00 | CC | (dst << 12) | (a << 16) | b;
 		PRINT_LAST_INSTRUCTION();
 	}
 	void ArmAssembler::FSQRTD(DoubleReg dst, DoubleReg src) {
 		incInstructionCount();
-		*mip++ = 0x0EB10BC0 | (dst << 12) | src;
+		*mip++ = 0x0EB10BC0 | CC | (dst << 12) | src;
 		PRINT_LAST_INSTRUCTION();
 	}
 	void ArmAssembler::STM(Register dst, int regMask) {
 		incInstructionCount();
-		*mip++ = 0x08000000 | (dst << 16) | regMask;
+		*mip++ = 0x08000000 | CC | (dst << 16) | regMask;
 		PRINT_LAST_INSTRUCTION();
 	}
 	void ArmAssembler::LDM(Register src, int regMask) {
 		incInstructionCount();
-		*mip++ = 0x08100000 | (src << 16) | regMask;
+		*mip++ = 0x08100000 | CC | (src << 16) | regMask;
 		PRINT_LAST_INSTRUCTION();
 	}
 	void ArmAssembler::STRD(Register src, int offset, Register dst) {
 		incInstructionCount();
-		*mip++ = 0x014000F0 | (src << 16) | (dst << 12) |
+		*mip++ = 0x014000F0 | CC | (src << 16) | (dst << 12) |
 			(offset & 0xF) | ((offset >> 4) << 8);
 		PRINT_LAST_INSTRUCTION();
 	}
 	void ArmAssembler::LDRD(Register src, int offset, Register dst) {
 		incInstructionCount();
-		*mip++ = 0x014000D0 | (src << 16) | (dst << 12) |
+		*mip++ = 0x014000D0 | CC | (src << 16) | (dst << 12) |
 			(offset & 0xF) | ((offset >> 4) << 8);
 		PRINT_LAST_INSTRUCTION();
 	}

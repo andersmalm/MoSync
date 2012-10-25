@@ -16,8 +16,12 @@ Software Foundation, 59 Temple Place - Suite 330, Boston, MA
 */
 
 #include "ArmRecompiler.h"
+#include "FileStream.h"
 
 #define CACHE_LINE_SIZE 64 // bytes
+
+// should be 1 in release builds
+#define DIRECT_JUMP 0
 
 #ifdef USE_ARM_RECOMPILER
 
@@ -68,12 +72,21 @@ int mAshmemEntryPoint = -1;
 
 #define I (mInstructions[0])
 
+
+#if DIRECT_JUMP
 #define JUMP_GEN(addr)\
 	{\
 	addr&=mEnvironment.codeMask;\
 	int ofs = mPipeToArmInstMap[addr] - (ARM_PC_ADDR);\
 	assm.B(ofs);\
-	}\
+	}
+#else
+#define JUMP_GEN(addr)\
+	{\
+		assm.MOV_imm32(AA::R0, mPipeToArmInstMap[addr & mEnvironment.codeMask]);\
+		returnFromRecompiledCodeR0();\
+	}
+#endif
 
 #define JUMP_IMM16(rd, rs, addr, cond) \
 	{\
@@ -84,16 +97,6 @@ int mAshmemEntryPoint = -1;
 	JUMP_GEN(addr)\
 	assm.SET_CONDITION_CODE(AA::AL);\
 	}
-
-#define CALL_IMM_ARM(imm32)\
-{\
-	int returnAddr = (mInstructions[0].ip+mInstructions[0].length);\
-	AA::Register saveReg = getSaveRegister(REG_ra, AA::R1);\
-	assm.MOV_imm32(saveReg, returnAddr);\
-	saveRegister(REG_ra, saveReg);\
-	assm.SET_CONDITION_CODE(AA::AL);\
-	JUMP_GEN(imm32);\
-}
 
 //	assm.MOV_imm32(AA::R2, mEnvironment.dataMask & ~(sizeof(type) - 1));
 
@@ -161,8 +164,6 @@ int mAshmemEntryPoint = -1;
 #define SAVE_MEMORY(memory_addr, arm_r, temp_reg)\
 	assm.MOV_imm32(temp_reg, (int)(size_t)memory_addr);\
 	assm.STR((AA::Register)arm_r, 0, (AA::Register)temp_reg);\
-
-//assm.MOV_imm32(temp_reg, (int)mPipeToArmInstMap);
 
 #define SET_PC(reg, temp_reg)\
 		assm.MOV_imm32(temp_reg, mEnvironment.codeMask);\
@@ -390,7 +391,7 @@ int mAshmemEntryPoint = -1;
 		addr = (void*) ((int)addr & ~0xFFF);
 		 len = (len+8192) & ~0xFFF;
 
-		__android_log_write(ANDROID_LOG_INFO, "JNI Recompiler", "flushing instruction cache");
+		//__android_log_write(ANDROID_LOG_INFO, "JNI Recompiler", "flushing instruction cache");
 
 		cacheflush((long int)addr, (long int)addr+len, 0);
 		return;
@@ -452,24 +453,42 @@ namespace MoSync {
 		sprintf(b, "AA::PC %d AA::r0 %d\n", AA::PC, AA::R0);
 		__android_log_write(ANDROID_LOG_INFO, "JNI Recompiler", b);
 #endif
+
 		// goto recompiled code
 		entryPoint.MOV(AA::PC, AA::R0);
 	}
 
-	void ArmRecompiler::returnFromRecompiledCode()
+	void ArmRecompiler::returnFromRecompiledCode() {
+		returnFromRecompiledCode(assm);
+	}
+
+	void ArmRecompiler::returnFromRecompiledCodeR0()
 	{
 		saveStaticRegisters(assm);
 
-		loadStackPointer(assm, AA::R0);
+		loadStackPointer(assm, AA::R1);
 
 		int mask = (0xffff)&(~(AA::R0_mask|AA::SP_mask|AA::PC_mask));
 		assm.LDMFD_bang(AA::SP, mask);
 
-		// set ARM_PC of the instruction following the RET as return value
-		assm.MOV(AA::R0, AA::PC);
-
 		// RET
 		assm.MOV(AA::PC, AA::LR);
+	}
+
+	void ArmRecompiler::returnFromRecompiledCode(AA& _assm)
+	{
+		saveStaticRegisters(_assm);
+
+		loadStackPointer(_assm, AA::R0);
+
+		int mask = (0xffff)&(~(AA::R0_mask|AA::SP_mask|AA::PC_mask));
+		_assm.LDMFD_bang(AA::SP, mask);
+
+		// set ARM_PC of the instruction following the RET as return value
+		_assm.MOV(AA::R0, AA::PC);
+
+		// RET
+		_assm.MOV(AA::PC, AA::LR);
 	}
 
 
@@ -731,6 +750,23 @@ namespace MoSync {
 		saveRegister(REG_sp, saveReg);
 	}
 
+	void ArmRecompiler::visit_RET() {
+		LOGC("RET\n");
+
+		assm.MOV_imm32(AA::R2, mEnvironment.codeMask);
+		assm.AND(AA::R1, loadRegister(REG_ra, AA::R3), AA::R2);
+
+		// AA:PC = mPipeToArmInstMap[ra & codeMask]
+		assm.LSL_i(AA::R1, AA::R1, 2); // *sizeof(int)
+		assm.ADD(AA::R1, AA::R1, PIPE_TO_ARM_MAP(AA::R2));           // r1 += PIPE_TO_ARM_MAP
+#if DIRECT_JUMP
+		assm.LDR(AA::PC, 0, AA::R1);                // PC = *r1
+#else
+		assm.LDR(AA::R0, 0, AA::R1);                // R0 = *r1
+		returnFromRecompiledCodeR0();
+#endif
+	}
+
 	void ArmRecompiler::visit_CALLR() {
 		LOGC("CALLR\n");
 		byte rd = I.rd;
@@ -744,19 +780,27 @@ namespace MoSync {
 		assm.MOV_imm32(AA::R2, mEnvironment.codeMask, true);
 		assm.AND(AA::R1, reg, AA::R2);
 
-		//assm.MOV_imm32(AA::R0, (int)mPipeToArmInstMap); // r0 = pipeToArmInstMap
-
 		assm.LSL_i(AA::R1, AA::R1, 2); // *sizeof(int)
-		assm.ADD(AA::R0, PIPE_TO_ARM_MAP(AA::R3), AA::R1);           // r0 += r1
-		assm.LDR(AA::R2, 0, AA::R0);                // r1 = *r0
+		assm.ADD(AA::R0, PIPE_TO_ARM_MAP(AA::R3), AA::R1);           // r0 = PIPE_TO_ARM_MAP + r1
+		assm.LDR(AA::R2, 0, AA::R0);                // r2 = *r0
 
+#if DIRECT_JUMP
 		assm.MOV(AA::PC, AA::R2);
+#else
+		assm.MOV(AA::R0, AA::R2);
+		returnFromRecompiledCodeR0();
+#endif
 	}
 
 	void ArmRecompiler::visit_CALLI() {
 		LOGC("CALLI\n");
 		int imm32 = mInstructions[0].imm;
-		CALL_IMM_ARM(imm32)
+		int returnAddr = (mInstructions[0].ip+mInstructions[0].length);
+		AA::Register saveReg = getSaveRegister(REG_ra, AA::R1);
+		assm.MOV_imm32(saveReg, returnAddr);
+		saveRegister(REG_ra, saveReg);
+		assm.SET_CONDITION_CODE(AA::AL);
+		JUMP_GEN(imm32);
 	}
 
 	void ArmRecompiler::visit_LDB() {
@@ -1030,19 +1074,6 @@ namespace MoSync {
 		saveRegister(rd, saveReg);
 	}
 
-	void ArmRecompiler::visit_RET() {
-		LOGC("RET\n");
-
-		assm.MOV_imm32(AA::R2, mEnvironment.codeMask);
-		assm.AND(AA::R1, loadRegister(REG_ra, AA::R3), AA::R2);
-
-		//assm.MOV_imm32(AA::R0, (int)mPipeToArmInstMap); // r0 = pipeToArmInstMap
-
-		assm.LSL_i(AA::R1, AA::R1, 2); // *sizeof(int)
-		assm.ADD(AA::R1, AA::R1, PIPE_TO_ARM_MAP(AA::R2));           // r0 += r1
-		assm.LDR(AA::PC, 0, AA::R1);                // r1 = *r0
-	}
-
 	void ArmRecompiler::visit_JC_EQ() {
 		LOGC("JC_EQ\n");
 		byte rd = mInstructions[0].rd;
@@ -1139,8 +1170,7 @@ namespace MoSync {
 		assm.AND(AA::R1, loadRegister(rd, AA::R3), AA::R2);
 
 		assm.LSL_i(AA::R1, AA::R1, 2); // *sizeof(int)
-		//assm.MOV_imm32(AA::R0, (int)mPipeToArmInstMap); // r0 = pipeToArmInstMap
-		assm.ADD(AA::R1, AA::R1, PIPE_TO_ARM_MAP(AA::R3));           // r0 += r1
+		assm.ADD(AA::R1, AA::R1, PIPE_TO_ARM_MAP(AA::R3));           // r0 = r1 + PIPE_TO_ARM_MAP
 		assm.LDR(AA::R2, 0, AA::R1);                // r1 = *r0
 		assm.MOV(AA::PC, AA::R2);
 	}
@@ -1220,7 +1250,7 @@ namespace MoSync {
 		int lastPc = ARM_PC;
 		assm.B(0);
 		//assm.mip++; // here we will inject a branch to be able to jump over the return.
-		returnFromRecompiledCode();
+		returnFromRecompiledCode(assm);
 		int newPc = ARM_PC;
 
 		if(mPass!=1) {
@@ -1374,8 +1404,7 @@ namespace MoSync {
 
 	void ArmRecompiler::visit_FLDR() {
 		AA::DoubleReg sr = getSaveDoubleReg(I.rd);
-		assm.FCPYD(sr, loadDoubleReg(I.rs));
-		saveDoubleReg(I.rd, sr);
+		saveDoubleReg(I.rd, loadDoubleReg(I.rs));
 	}
 
 	void ArmRecompiler::visit_FLDIS() {
@@ -1646,7 +1675,7 @@ namespace MoSync {
 
 		LOG("Statically allocated registers:\n");
 		for(int i = 0; i < NUM_STATICALLY_ALLOCATED_REGISTERS; i++) {
-			LOG("Reg%d\n", registerMapping[i].msReg);
+			LOG("ms %d, arm %i\n", registerMapping[i].msReg, registerMapping[i].armReg);
 		}
 	}
 
@@ -1687,7 +1716,9 @@ namespace MoSync {
 #ifdef DEBUG_DISASM
 			assm.verboseFlag = true;
 #endif
-			for(int i = 0; i < mEnvironment.codeSize; i++) mPipeToArmInstMap[i]+=(int)(size_t)assm.mipStart;
+			for(int i = 0; i < mEnvironment.codeSize; i++)
+				if(mPipeToArmInstMap[i] != 0)
+					mPipeToArmInstMap[i] += (int)(size_t)assm.mipStart;
 		}
 	}
 
@@ -1707,12 +1738,14 @@ namespace MoSync {
 		}
 
 #ifdef LOG_STATE_CHANGE
-			emitOneArgFuncCall(&ArmRecompiler::logStateChange, ip);
+		emitOneArgFuncCall(&ArmRecompiler::logStateChange, ip);
 #endif
 	}
 #ifdef LOG_STATE_CHANGE
 	void ArmRecompiler::logStateChange(int ip) {
+		LOG("logStateChange(%x)\n", ip);
 		mEnvironment.core->logStateChange(ip);
+		LOG("logStateChange done\n");
 	}
 #endif
 
@@ -1741,12 +1774,20 @@ namespace MoSync {
 			LOG("Stopped, Recompiling...\n");
 			Recompiler<ArmRecompiler>::recompile();
 			LOG("Finished recompiling.\n");
+#ifdef _android
+			WriteFileStream f("/sdcard/arm.bin");
+			f.write(_androidMemAddress, _androidMemSize);
+			WriteFileStream m("/sdcard/map.bin");
+			m.write(mPipeToArmInstMap, sizeof(AA::MDInstruction) * mEnvironment.codeSize);
+			LOG("dump'd!!\n");
+#endif
 			ip = (int)mPipeToArmInstMap[mEnvironment.entryPoint];
 			mStopped = false;
 		}
 #ifdef _android
 		char b[100];
 
+/*
 		sprintf(b, "entry point fd %i\n", mAshmemEntryPoint);
 		__android_log_write(ANDROID_LOG_INFO, "JNI Recompiler", b);
 
@@ -1758,15 +1799,62 @@ namespace MoSync {
 
 		sprintf(b, "diff  %i (%x)\n", ((int)ip-(int)entryPoint.mipStart), ((int)ip-(int)entryPoint.mipStart));
 		__android_log_write(ANDROID_LOG_INFO, "JNI Recompiler", b);
-
+*/
 		flushInstructionCache(_androidMemAddress, _androidMemSize);
 		flushInstructionCache(_androidEntryAddress, _androidEntryMemSize);
 #endif
 		//LOGD("Entering generated code...\n");
-		int arm_ip = ((int (*)(int))entryPoint.mipStart)(ip);
+		LOG("enter: 0x%x\n", ip);
 
-		//LOGD("Exited generated code.\n");
-		return arm_ip;
+		// if valid main address or valid entry address, execute.
+		if((ip >= (size_t)_androidMemAddress && ip < ((size_t)_androidMemAddress+ _androidMemSize)) ||
+			ip == (size_t)_androidEntryAddress)
+		{
+			int arm_ip = ((int (*)(int))entryPoint.mipStart)(ip);
+			//LOG("yield: 0x%x\n", arm_ip);
+			//LOGD("Exited generated code.\n");
+			return arm_ip;
+		} else {	// otherwise panic.
+			LOG("Invalid entrypoint!\n");
+			static const char* const regNames[32] = {
+				"zr",
+				"sp",
+				"ra",
+				"fp",
+				"s0",
+				"s1",
+				"s2",
+				"s3",
+				"s4",
+				"s5",
+				"s6",
+				"s7",
+				"p0",
+				"p1",
+				"p2",
+				"p3",
+				"g0",
+				"g1",
+				"g2",
+				"g3",
+				"g4",
+				"g5",
+				"g6",
+				"g7",
+				"g8",
+				"g9",
+				"g10",
+				"g11",
+				"g12",
+				"g13",
+				"r0",
+				"r1",
+			};
+			for(int i=0; i<32; i++) {
+				LOG("%3s %08x\n", regNames[i], mEnvironment.regs[i]);
+			}
+			DEBIG_PHAT_ERROR;
+		}
 	}
 
 	int ArmRecompiler::shiftAriMatcher() {
@@ -1836,6 +1924,7 @@ static void MyExceptionHandlerL(TExcType aType)
 		(ELeave)
 	#endif
 		AA::MDInstruction[mEnvironment.codeSize];
+		memset(mPipeToArmInstMap, 0, sizeof(*mPipeToArmInstMap) * mEnvironment.codeSize);
 
 		byte shifts[] = {
 			OP_SLLI,

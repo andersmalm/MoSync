@@ -166,12 +166,13 @@ public:
 	int curStateChange;
 
 	void initStateChange() {
+		LOG("initStateChange()\n");
 		csMem = 0;
 		curStateChange = 0;
 	}
 
 	void freeStateChange() {
-		if(csMem) delete []csMem;
+		//if(csMem) delete []csMem;
 	}
 
 	int stateChangeInstCount;
@@ -179,7 +180,10 @@ public:
 
 	void writeStateChanges() {
 #ifdef SYMBIAN
-#define STATE_LOG_DIR "C:\\data"
+#define STATE_LOG_DIR "C:\\data\\"
+#elif defined(_android)
+		LOG("writeStateChanges()\n");
+#define STATE_LOG_DIR "/sdcard/"
 #else
 #define STATE_LOG_DIR ""
 #endif
@@ -241,7 +245,7 @@ public:
 #if 0
 			csMem = new int[gCore->DATA_SEGMENT_SIZE>>2];
 #else
-			csMem = (int*)1;
+			csMem = (int*)4;
 #endif
 			for(unsigned int i = 0; i < NUM_REGS; i++) {
 				csRegs[i] = regs[i];
@@ -256,7 +260,7 @@ public:
 			stateChangeInstCount = 0;
 			stateChangeAppend = false;
 
-#if 0
+#if 1
 			// dump initial state
 			Base::WriteFileStream stateLog(STATE_LOG_DIR "more_initial_state.txt");
 
