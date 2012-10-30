@@ -15,7 +15,7 @@
 # 02111-1307, USA.
 
 def switchPathSlashes(cmd)
-	error("null path") if(!cmd)
+	raise "null path" if(!cmd)
 	if(HOST == :win32)
 		# bug in windows command line parser causes commands on the following format to fail:
 		# \directory\subdir/executable

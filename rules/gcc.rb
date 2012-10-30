@@ -174,6 +174,20 @@ class GccWork < BuildWork
 
 	include GccFlags
 
+	def compareFileTasks(a, b)
+		if(File.exist?(b.to_s))
+			bd = b.newDate
+		else
+			bd = LATE
+		end
+		if(File.exist?(a.to_s))
+			ad = a.newDate
+		else
+			ad = LATE
+		end
+		bd <=> ad
+	end
+
 	def setup2
 		define_cflags
 		@CFLAGS_MAP = { ".c" => @CFLAGS + host_flags,
@@ -202,7 +216,7 @@ class GccWork < BuildWork
 		end
 
 		@all_sourcefiles = cfiles + cppfiles
-		@all_sourcefiles.sort! do |a,b| b.newDate <=> a.newDate end
+		@all_sourcefiles.sort! do |a,b| compareFileTasks(a, b) end
 
 		@source_objects = objects(@all_sourcefiles)
 		all_objects = @source_objects + @EXTRA_OBJECTS
