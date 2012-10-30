@@ -332,7 +332,7 @@ module MoSyncExeModule
 		super
 
 		if(USE_GNU_BINUTILS)
-			if(!defined?(MODE))
+			if(!defined?(MODE) && !isPackingForIOS)
 				@TARGET = Mapip2MxTask.new(self, @TARGET, @EXTRA_LINKFLAGS)
 				@prerequisites << @TARGET
 			end
