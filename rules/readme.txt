@@ -24,7 +24,7 @@ When the variables are set, call invoke on your object. This builds all needed f
 
 
 # Options
-Workfiles can take command-line arguments. If they're on the form "KEY=value", then they're an option, which are by default saved as constants in your workfile.
+Workfiles can take command-line arguments. If they're on the form "KEY=value", then they're options, which are made available as Ruby constants.
 
 
 # Targets

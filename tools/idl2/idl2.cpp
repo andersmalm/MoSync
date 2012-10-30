@@ -29,8 +29,6 @@ Software Foundation, 59 Temple Place - Suite 330, Boston, MA
 #include "helpers/mkdir.h"
 #include "helpers/types.h"
 
-#include "core.h"
-
 using namespace std;
 
 static vector<string> readExtensions(const char* filename);
@@ -49,7 +47,6 @@ static void outputInvokeSyscallArmRecompiler(const Interface& maapi);
 static void outputInvokeSyscallJava(const Interface& maapi);
 static void outputSyscallStaticJava(const Interface& maapi);
 static void outputSyscallStaticCpp(const Interface& maapi);
-static void outputCoreConsts();
 static void outputConsts(const string& filename, const Interface& inf, int ix);
 static void outputConstSets(const Interface& maapi);
 
@@ -139,9 +136,6 @@ int main() {
 		// Generate files used when building the runtimes.
 		outputRuntimeBuilderFiles(maapi);
 
-		// Generate core constants.
-		outputCoreConsts();
-
 		// Generate headefile suitable for use with the tolua binding library.
 		// See comment in output-bindings.h for notes on how to use this file
 		// with tolua.
@@ -174,7 +168,6 @@ int main() {
 
 		copy("Output/invoke_syscall_java.h", "../../runtimes/java/Shared/generated/");
 		copy("Output/syscall_static_java.h", "../../runtimes/java/Shared/generated/");
-		copy("Output/core_consts.h", "../../runtimes/java/Shared/generated/");
 		copy("Output/MAAPI_consts.h", "../../runtimes/java/Shared/generated/");
 
 		// Create folder for generated java files in the Android runtime.
@@ -1137,17 +1130,6 @@ static void outputSyscallStaticCpp(const Interface& maapi) {
 		}
 		stream << "(SYSCALL_IMPL(" << f.name<<")("<<staticCppInvokeStream.str()<<"));\n}\n";
 	}
-}
-
-static void outputCoreConsts() {
-#define DO(id) { file << "#define "<<#id<<" "<<i<<"\n"; i++; }
-	int i=0;
-	ofstream file("Output/core_consts.h");
-	INSTRUCTIONS(DO);
-	file <<"\n";
-	i = 0;
-	REGISTERS(DO);
-	file <<"\n";
 }
 
 static void outputConstSets(const Interface& maapi) {

@@ -53,9 +53,6 @@ end
 
 # allowed modes: run, compile, dejaGnu (parse the source file to find compile or run).
 SETTINGS[:source_paths] =
-	dgSub('g++.dg', :run)+
-	dgSub('g++.old-deja', :run)+
-	dgSub('gcc.dg', :compile)+
 [
 	sp('ieee/', BASE + 'gcc.c-torture/execute/ieee'),
 	sp('', BASE + 'gcc.c-torture/execute'),
@@ -66,6 +63,9 @@ SETTINGS[:source_paths] =
 	sp('unsorted/', BASE + 'gcc.c-torture/unsorted', :compile),
 	sp('compat/', BASE + 'gcc.c-torture/compat'),
 ]+
+	dgSub('g++.dg', :run)+
+	dgSub('g++.old-deja', :run)+
+	dgSub('gcc.dg', :compile)+
 []
 
 NEEDS_HEAP = [
@@ -194,7 +194,7 @@ class TTWork < PipeExeWork
 			'struct-layout-1_x.c' => ' -DSKIP_DECIMAL_FLOAT',
 			'struct-layout-1_y.c' => ' -DSKIP_DECIMAL_FLOAT',
 		}
-		@EXTRA_LINKFLAGS = standardMemorySettings(16)
+		@EXTRA_LINKFLAGS = standardMemorySettings(15)
 		@EXTRA_EMUFLAGS = ' -noscreen -allowdivzero'
 		@NAME = name
 	end
@@ -215,7 +215,7 @@ class TTWork < PipeExeWork
 		@CFLAGS = flags + @EXTRA_CFLAGS
 		@CPPFLAGS = flags + @EXTRA_CPPFLAGS
 
-		@TARGET_PATH = @BUILDDIR + @NAME.ext('.moo')
+		@TARGET_PATH = @BUILDDIR + @NAME.ext('.elf')
 	end
 	def builddir; @BUILDDIR; end
 	def compile

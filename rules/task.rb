@@ -43,7 +43,13 @@ class TaskBase
 
 	# Writes a readable representation of this TaskBase and its prerequisites to stdout.
 	def dump(level)
+		puts dumpString(level)
 		@prerequisites.each do |p| p.dump(level+1) end
+	end
+
+	# Override this to dump extra info
+	def dumpString(level)
+		(" " * level) + self.class.name
 	end
 end
 
@@ -215,13 +221,6 @@ class Task < TaskBase
 		return false
 	end
 
-	# A Task's timestamp is used for comparison with other Tasks to determine
-	# if a target is older than a source and thus needs to be remade.
-	# This default implementation returns EARLY.
-	def timestamp
-		EARLY
-	end
-
 	# Returns true if this Task should be executed, false otherwise.
 	def needed?(log = true)
 		true
@@ -261,8 +260,8 @@ class FileTask < Task
 		return res
 	end
 
-	# Is this FileTask needed?  Yes if it doesn't exist, or if its time stamp
-	# is out of date.
+	# Is this FileTask needed?  Yes if it doesn't exist, or if it's older
+	# than any prerequisite.
 	# Prints the reason the task is needed, if <tt>log</tt>.
 	def needed?(log = true)
 		if(!File.exist?(@NAME))
@@ -270,34 +269,18 @@ class FileTask < Task
 			puts "Because file does not exist:" if(log)
 			return true
 		end
-		return true if out_of_date?(timestamp, log)
+		return true if out_of_date?(newDate, log)
 		return false
 	end
 
-	def self.timestamp(file)
-		if File.exist?(file)
-			# ctime is not useful for comparisons.
-			# be careful when copying files manually.
-
-			#c = File.ctime(file)
-			m = File.mtime(file)
-			#return c if(c > m)
-			return m
-		else
-			EARLY
-		end
-	end
-
-	# Time stamp for file task. If the file exists, this is the file's modification time,
-	# as reported by the filesystem.
-	def timestamp
-		self.class.timestamp(@NAME)
-	end
-
-	# Are there any prerequisites with a later time than the given time stamp?
-	def out_of_date?(stamp, log=true)
+	# Are there any prerequisites newer than self?
+	def out_of_date?(d, log=true)
 		@prerequisites.each do |n|
-			if(n.timestamp > stamp)
+			if(n.is_a?(FileTask) && !File.exist?(n.to_s))
+				puts "Because prerequisite '#{n}'(#{n.class}) does not exist:" if(log)
+				return true
+			end
+			if(n.respond_to?(:newDate) && n.newDate > d)
 				puts "Because prerequisite '#{n}'(#{n.class}) is newer:" if(log)
 				return true
 			end
@@ -305,9 +288,12 @@ class FileTask < Task
 		return false
 	end
 
-	def dump(level)
-		puts (" " * level) + @NAME
-		super
+	def newDate
+		return File.mtime(@NAME)
+	end
+
+	def dumpString(level)
+		super(level) + ": " + @NAME
 	end
 end
 
@@ -331,7 +317,7 @@ class MultiFileTask < FileTask
 		res = super
 		if(res)
 			@files.each do |file|
-				error "Failed to build #{file}" if(out_of_date?(self.class.timestamp(file), true))
+				error "Failed to build #{file}" if(!File.exist?(file) || out_of_date?(File.mtime(file), true))
 			end
 		end
 		return res
@@ -348,18 +334,28 @@ class MultiFileTask < FileTask
 				return true
 			end
 		end
-		return true if out_of_date?(timestamp, log)
+		return true if out_of_date?(oldDate, log)
 		return false
 	end
 
-	# Returns the timestamp of the oldest file.
-	def timestamp
-		time = super
+	# Returns the date of the newest file.
+	def newDate
+		d = super
 		@files.each do |file|
-			t = self.class.timestamp(file)
-			time = t if(t < time)
+			fd = File.mtime(file)
+			d = fd if(fd > d)
 		end
-		return time
+		return d
+	end
+
+	# Returns the date of the oldest file.
+	def oldDate
+		d = File.mtime(@NAME)
+		@files.each do |file|
+			fd = File.mtime(file)
+			d = fd if(fd < d)
+		end
+		return d
 	end
 end
 
@@ -367,8 +363,7 @@ end
 # For example, if you want to create 'foo/bar', you need not create two DirTasks. One will suffice.
 class DirTask < FileTask
 	def execute
-		p @NAME
-		FileUtils.mkdir_p @NAME
+		FileUtils::Verbose.mkdir_p @NAME
 	end
 	def needed?(log = true)
 		if(!File.exist?(@NAME))
@@ -381,10 +376,10 @@ class DirTask < FileTask
 		end
 		return false
 	end
-	def out_of_date?(timestamp, log)
+	def out_of_date?(d, log)
 		return false
 	end
-	def timestamp
+	def newDate
 		return EARLY
 	end
 end

@@ -28,6 +28,7 @@ final int EXEC_NAME() throws Exception {
 	int rd,rs;
 	int imm32;
 	int[] regs = mRegs;
+	double[] freg = mFregs;
 	int[] mem_ds = mMem_ds;
 	byte[] mem_cs = mMem_cs;
 	int[] mem_cp = mMem_cp;
@@ -70,40 +71,34 @@ final int EXEC_NAME() throws Exception {
 			OPC(NOT)	FETCH_RD_RS	RD = ~RS;	EOP;
 			OPC(NEG)	FETCH_RD_RS	RD = -RS;	EOP;
 
-			OPC(PUSH)	FETCH_RD_IMM8
+			OPC(PUSH)	FETCH_RD_RS
 			{
-				int r = rd;
-				int n = IMM;
-				if(rd < 2 || ((int)rd) + n > 32)
+				if(rd < 2 || rd > 31 || rs < rd || rs > 31)
 					BIG_PHAT_ERROR;
 
-				do {
+				for(int r=rd; r<=rs; r++) {
 					REG(REG_sp) -= 4;
 					WINT(REG(REG_sp), REG(r));
 					DEBUG("\t0x"+Integer.toHexString(REG(r)));
-					r++;
-				} while(--n != 0);
+				}
 			}
 			EOP;
 
-			OPC(POP) FETCH_RD_IMM8
+			OPC(POP) FETCH_RD_RS
 			{
-				int r = rd;
-				int n = IMM;
-				if(rd > 31 || ((int)rd) - n < 1)
+				if(rd < 2 || rd > 31 || rs < rd || rs > 31)
 					BIG_PHAT_ERROR;
 
-				do {
+				for(int r=rs; r>=rd; r--) {
 					REG(r) = RINT(REG(REG_sp));
 					REG(REG_sp) += 4;
 					DEBUG("\t0x"+Integer.toHexString(REG(r)));
-					r--;
-				} while(--n != 0);
+				}
 			}
 			EOP;
 
-			OPC(CALL)	FETCH_RD	CALL_RD		EOP;
-			OPC(CALLI)	FETCH_IMM16	CALL_IMM	EOP;
+			OPC(CALLR)	FETCH_RD	CALL_RD		EOP;
+			OPC(CALLI)	FETCH_IMM32	CALL_IMM	EOP;
 
 			OPC(LDB) FETCH_RD_RS_CONST  RBYTE(RS + IMM, RD); DEBUG("\t"+RD);	EOP;
 			OPC(LDH) FETCH_RD_RS_CONST  RSHORT(RS + IMM, RD); DEBUG("\t"+RD);	EOP;
@@ -116,8 +111,138 @@ final int EXEC_NAME() throws Exception {
 			OPC(LDI)	FETCH_RD_CONST	RD = IMM;	EOP;
 			OPC(LDR)	FETCH_RD_RS	RD = RS;	EOP;
 
+			OPC(LDDR) FETCH_RD_RS WRITE_REG(rdlo, RSLO); WRITE_REG(rdhi, RSHI); EOP;
+			OPC(LDDI) FETCH_RD_CONST WRITE_REG(rdlo, IMM); FETCH_CONST; WRITE_REG(rdhi, IMM); EOP;
+
+			OPC(FLOATS) FETCH_FRD_RS FRD = (double)RS; EOP;
+			OPC(FLOATUNS) FETCH_FRD_RS FRD = (double)(((long)RS) & 0x0ffffffff); EOP;
+
+			OPC(FLOATD)
+			{
+				FETCH_FRD_RS;
+				FRD = (double)ints2long(RSLO, RSHI);
+			} EOP;
+
+			OPC(FLOATUND)
+			{
+				FETCH_FRD_RS;
+				long l = ints2long(RSLO, RSHI);
+				if(l >= 0)
+					FRD = (double)l;
+				else	// This is how BigInteger.doubleValue() does it.
+					FRD = Double.parseDouble(unsignedLongToHexString(l));
+			} EOP;
+
+			OPC(FSTRS) {
+				FETCH_RD_FRS;
+				WRITE_REG(rd, Float.floatToIntBits((float)FRS));
+			} EOP;
+			OPC(FSTRD) {
+				FETCH_RD_FRS;
+				long l = Double.doubleToLongBits(FRS);
+				WRITE_REG(rdlo, (int)(l >> 32));
+				WRITE_REG(rdhi, (int)l);
+			} EOP;
+
+			OPC(FLDRS) FETCH_FRD_RS FRD = (double)Float.intBitsToFloat(RS); EOP;
+			OPC(FLDRD) FETCH_FRD_RS FRD = Double.longBitsToDouble(ints2long(RSLO, RSHI)); EOP;
+
+			OPC(FLDR) FETCH_FRD_FRS FRD = FRS; EOP;
+
+			OPC(FLDIS) FETCH_FRD_CONST FRD = (double)Float.intBitsToFloat(IMM); EOP;
+			OPC(FLDID) FETCH_FRD_CONST { int imm = IMM; FETCH_CONST; FRD = Double.longBitsToDouble(ints2long(IMM, imm)); } EOP;
+
+			OPC(FIX_TRUNCS) FETCH_RD_FRS WRITE_REG(rd, (int)FRS); EOP;
+			OPC(FIX_TRUNCD)
+			{
+				FETCH_RD_FRS;
+				long l = (long)FRS;
+				WRITE_REG(rdlo, (int)(l >> 32));
+				WRITE_REG(rdhi, (int)l);
+			} EOP;
+
+			// identical to FIX_*. todo: remove these two opcodes.
+			OPC(FIXUN_TRUNCS) FETCH_RD_FRS WRITE_REG(rd, (int)FRS); EOP;
+			OPC(FIXUN_TRUNCD)
+			{
+				FETCH_RD_FRS;
+				long l = (long)FRS;
+				WRITE_REG(rdlo, (int)(l >> 32));
+				WRITE_REG(rdhi, (int)l);
+			} EOP;
+
+			OPC(FSTS)
+			{
+				FETCH_RD_FRS_CONST
+				WINT(RD + IMM, Float.floatToIntBits((float)FRS));
+			} EOP;
+
+			OPC(FSTD)
+			{
+				FETCH_RD_FRS_CONST
+				int addr = RD + IMM;
+				long l = Double.doubleToLongBits(FRS);
+				WINT(addrlo, (int)(l >> 32));
+				WINT(addrhi, (int)l);
+			} EOP;
+
+			OPC(FLDS)
+			{
+				FETCH_RD_RS_CONST
+				FRD = (double)Float.intBitsToFloat(RINT(RS + IMM));
+			} EOP;
+
+			OPC(FLDD)
+			{
+				FETCH_RD_RS_CONST
+				int addr = RS + IMM;
+				FRD = Double.longBitsToDouble(ints2long(RINT(addrlo), RINT(addrhi)));
+			} EOP;
+
+			OPC(FADD) FETCH_FRD_FRS FRD += FRS; EOP;
+			OPC(FSUB) FETCH_FRD_FRS FRD -= FRS; EOP;
+			OPC(FMUL) FETCH_FRD_FRS FRD *= FRS; EOP;
+			OPC(FDIV)
+			{
+				FETCH_FRD_FRS;
+	#ifndef ALLOW_FLOAT_DIVISION_BY_ZERO
+				if(FRS == 0.0)
+				{
+					throw new Exception("Float division by zero!");
+				}
+	#endif	//ALLOW_FLOAT_DIVISION_BY_ZERO
+				FRD /= FRS;
+			}
+			EOP;
+
+			OPC(FSQRT) FETCH_FRD_FRS FRD = Math.sqrt(FRS); EOP;
+			OPC(FSIN) FETCH_FRD_FRS FRD = Math.sin(FRS); EOP;
+			OPC(FCOS) FETCH_FRD_FRS FRD = Math.cos(FRS); EOP;
+			OPC(FEXP) FETCH_FRD_FRS FRD = Float11.exp(FRS); EOP;
+			OPC(FLOG) FETCH_FRD_FRS FRD = Float11.log(FRS); EOP;
+			OPC(FPOW) FETCH_FRD_FRS FRD = Float11.pow(FRD, FRS); EOP;
+			OPC(FATAN2) FETCH_FRD_FRS FRD = Float11.atan2(FRD, FRS); EOP;
+
+			OPC(LDD)
+			{
+				FETCH_RD_RS_CONST
+				int addr = RS + IMM;
+				RDLO = RINT(addr);
+				RDHI = RINT(addr + 4);
+			}
+			EOP;
+
+			OPC(STD)
+			{
+				FETCH_RD_RS_CONST
+				int addr = RD + IMM;
+				WINT(addr, RSLO);
+				WINT(addr + 4, RSHI);
+			}
+			EOP;
+
 			OPC(RET)
-				IP = REG(REG_rt);
+				IP = REG(REG_ra);
 			EOP;
 
 			OPC(JC_EQ) 	FETCH_RD_RS_ADDR	if (RD == RS)	{ JMP_IMM; } 	EOP;
@@ -132,39 +257,7 @@ final int EXEC_NAME() throws Exception {
 			OPC(JC_GTU)	FETCH_RD_RS_ADDR	if(OPU(RD, >, RS))	{ JMP_IMM; }	EOP;
 			OPC(JC_LEU)	FETCH_RD_RS_ADDR	if(OPU(RD, <=, RS))	{ JMP_IMM; }	EOP;
 
-			OPC(JPI)	FETCH_IMM16		JMP_IMM		EOP;
-			OPC(JPR)	FETCH_RD		JMP_RD		EOP;
-
-			// !!>> Added ARH - pls check 16-01-2007
-
-			OPC(FAR)
-			{
-				//op = FETCH_CODEBYTE_FAST;
-				switch(FETCH_CODEBYTE_FAST)
-				{
-					OPC(CALLI)	FETCH_IMM24	CALL_IMM	EOP;
-
-					OPC(JC_EQ) 	FETCH_RD_RS_ADDR24	if (RD == RS)	{ JMP_IMM; } 	EOP;
-					OPC(JC_NE)	FETCH_RD_RS_ADDR24	if (RD != RS)	{ JMP_IMM; }	EOP;
-					OPC(JC_GE)	FETCH_RD_RS_ADDR24	if (RD >= RS)	{ JMP_IMM; }	EOP;
-					OPC(JC_GT)	FETCH_RD_RS_ADDR24	if (RD >  RS)	{ JMP_IMM; }	EOP;
-					OPC(JC_LE)	FETCH_RD_RS_ADDR24	if (RD <= RS)	{ JMP_IMM; }	EOP;
-					OPC(JC_LT)	FETCH_RD_RS_ADDR24	if (RD <  RS)	{ JMP_IMM; }	EOP;
-
-					OPC(JC_LTU)	FETCH_RD_RS_ADDR24	if(OPU(RD, <, RS))	{ JMP_IMM; }	EOP;
-					OPC(JC_GEU)	FETCH_RD_RS_ADDR24	if(OPU(RD, >=, RS))	{ JMP_IMM; }	EOP;
-					OPC(JC_GTU)	FETCH_RD_RS_ADDR24	if(OPU(RD, >, RS))	{ JMP_IMM; }	EOP;
-					OPC(JC_LEU)	FETCH_RD_RS_ADDR24	if(OPU(RD, <=, RS))	{ JMP_IMM; }	EOP;
-
-					OPC(JPI)	FETCH_IMM24		JMP_IMM		EOP;
-
-				default:
-					DEBUG_ALWAYS("\tIllegal far instruction 0x" +
-						Integer.toHexString(REG(mem_cs[IP-1])) + ", 0x" +
-						Integer.toHexString(REG(IP-1)));
-					BIG_PHAT_ERROR;
-				}
-			} EOP;
+			OPC(JPI)	FETCH_IMM32		JMP_IMM		EOP;
 
 			OPC(XB)		FETCH_RD_RS		RD = (int)((byte) RS);	EOP;
 			OPC(XH)		FETCH_RD_RS		RD = (int)((short) RS);	EOP;
@@ -186,27 +279,22 @@ final int EXEC_NAME() throws Exception {
 				IP = mIP;
 			} EOP;
 #else
-			OPC(ENDOP) {	//something of a hack
+			OPC(BREAK) {	//something of a hack
 				mVM_Yield = true;
 				return IP;
 			} //EOP;	//unreachable statement
 #endif
 
-			OPC(CASE) FETCH_RD; FETCH_IMM24; {
-				int CaseStart = mem_ds[imm32];
-				//DDUMP(CaseStart);
-				int CaseLength = mem_ds[imm32 + 1];
-				//DDUMP(CaseLength);
+			OPC(CASE) FETCH_RD; FETCH_CONST; {
+				int CaseStart = IMM;
+				FETCH_CONST; int CaseLength = IMM;
+				FETCH_CONST; int tableAddress = IMM;
+				FETCH_CONST; int defaultLabel = IMM;
 				int index = RD - CaseStart;
-				//DDUMP(index);
 				if(index <= CaseLength && index >= 0) {
-					int tableAddress = imm32 + 3;
-					//DDUMP(tableAddress);
 					IP = mem_ds[tableAddress + index];
 				} else {
-					int DefaultCaseAddress = mem_ds[imm32 + 2];
-					//DDUMP(DefaultCaseAddress);
-					IP = DefaultCaseAddress;
+					IP = defaultLabel;
 				}
 			} EOP;
 

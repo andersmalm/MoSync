@@ -318,11 +318,11 @@ VMLOOP_LABEL
 		} EOP;
 
 		OPC(FSTRS) {
-			FETCH_RD_RS MA_FV fv;
+			FETCH_RD_FRS MA_FV fv;
 			fv.f = (float)FRS.d;
 			WRITE_REG(rd, fv.i);
 		} EOP;
-		OPC(FSTRD) FETCH_RD_RS WRITE_REG(rd, FRS.i[0]); WRITE_REG(rd+1, FRS.i[1]); EOP;
+		OPC(FSTRD) FETCH_RD_FRS WRITE_REG(rd, FRS.i[0]); WRITE_REG(rd+1, FRS.i[1]); EOP;
 
 		OPC(FLDRS) FETCH_FRD_RS { MA_FV fv; fv.i = RS; FRD.d = (double)fv.f; } EOP;
 		OPC(FLDRD) FETCH_FRD_RS FRD.i[0] = RS; FRD.i[1] = REG(rs+1); EOP;

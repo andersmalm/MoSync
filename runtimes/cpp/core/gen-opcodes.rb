@@ -234,6 +234,28 @@ def writeRegisterNames(file)
 	file.puts '};'
 end
 
+def writeCCoreInstructions(file, &reg)
+	i = 0
+	file.puts '#ifndef GEN_OPCODES_H'
+	file.puts '#define GEN_OPCODES_H'
+	file.puts
+	OPCODES.each do |op|
+		file.puts "#define OP_#{op.name.to_s.upcase} #{sprintf('0x%x', i)}"
+		i += 1
+	end
+	file.puts
+	file.puts "#define OPCODE_COUNT #{OPCODES.size}"
+	file.puts
+	file.puts "#define INSTRUCTIONS(m)\\"
+	OPCODES.each do |op|
+		file.puts "\tm(#{op.name.to_s.upcase})\\"
+	end
+	file.puts
+	reg.call
+	file.puts
+	file.puts '#endif	//GEN_OPCODES_H'
+end
+
 if(mode == 'cgen')
 	open(filename, 'w') do |file|
 		i = 0
@@ -246,29 +268,21 @@ if(mode == 'cgen')
 	end
 elsif(mode == 'ccore')
 	open(filename, 'w') do |file|
-		i = 0
-		file.puts '#ifndef GEN_OPCODES_H'
-		file.puts '#define GEN_OPCODES_H'
-		file.puts
-		OPCODES.each do |op|
-			file.puts "#define OP_#{op.name.to_s.upcase} #{sprintf('0x%x', i)}"
-			i += 1
+		writeCCoreInstructions(file) do
+			file.puts 'enum {'
+			REGISTERS.each do |r|
+				file.puts "\tREG_#{r},"
+			end
+			file.puts '};'
 		end
-		file.puts
-		file.puts "#define OPCODE_COUNT #{OPCODES.size}"
-		file.puts
-		file.puts "#define INSTRUCTIONS(m)\\"
-		OPCODES.each do |op|
-			file.puts "\tm(#{op.name.to_s.upcase})\\"
+	end
+elsif(mode == 'jcore')
+	open(filename, 'w') do |file|
+		writeCCoreInstructions(file) do
+			REGISTERS.each_with_index do |r, i|
+				file.puts "#define REG_#{r} #{i}"
+			end
 		end
-		file.puts
-		file.puts 'enum {'
-		REGISTERS.each do |r|
-			file.puts "\tREG_#{r},"
-		end
-		file.puts '};'
-		file.puts
-		file.puts '#endif	//GEN_OPCODES_H'
 	end
 elsif(mode == 'cscore')
 	open(filename, 'w') do |file|

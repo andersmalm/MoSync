@@ -144,7 +144,7 @@ def sed(script)
 	end
 end
 
-# EarlyTime is a fake timestamp that occurs _before_ any other time value.
+# EarlyTime is a fake time that occurs _before_ any other time value.
 # Its instance is called EARLY.
 # Equivalent to a file not existing.
 class EarlyTime
@@ -162,7 +162,7 @@ class EarlyTime
 end
 EARLY = EarlyTime.instance
 
-# LateTime is a fake timestamp that occurs _after_ any other time value.
+# LateTime is a fake time that occurs _after_ any other time value.
 # Its instance is called LATE.
 class LateTime
 	include Comparable

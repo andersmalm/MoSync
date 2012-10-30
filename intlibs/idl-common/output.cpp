@@ -1003,7 +1003,10 @@ void streamInvokeSyscall(ostream& stream, const Interface& maapi, bool java, int
 			if(isFloat) {
 				if(freg < 8) {	// float register
 					stream << "FREGD(" << (8 + freg) << ");\n";
-					stream << "\tLOGSC(\"%g\", " << a.name << ");\n";
+					if(java)
+						stream << "\tLOGSC(" << a.name << ");\n";
+					else
+						stream << "\tLOGSC(\"%g\", " << a.name << ");\n";
 					freg++;
 				} else {	// stack
 					stream << "_SYSCALL_CONVERT_" << convType <<

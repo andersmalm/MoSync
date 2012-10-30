@@ -83,23 +83,22 @@ end
 SKINS = CopyDirWork.new('skins')
 RULES = CopyDirWork.new('rules')
 
-GEN_OPCODES = FileTask.new(nil, 'runtimes/cpp/core/gen-opcodes.h')
-GEN_OPCODES.instance_eval do
-	@gen = 'runtimes/cpp/core/gen-opcodes.rb'
-	@prerequisites << FileTask.new(nil, @gen)
+class GenOpcodesTask < FileTask
+	def initialize(mode, name)
+		super(nil, name)
+		@mode = mode
+		@gen = 'runtimes/cpp/core/gen-opcodes.rb'
+		@prerequisites << FileTask.new(nil, @gen)
+		@prerequisites << DirTask.new(nil, File.dirname(@NAME))
+	end
 	def execute
-		sh "ruby #{@gen} ccore #{@NAME}"
+		sh "ruby #{@gen} #{@mode} #{@NAME}"
 	end
 end
 
-GEN_CS_OPCODES = FileTask.new(nil, 'runtimes/csharp/windowsphone/mosync/mosyncRuntime/Source/gen-core.cs')
-GEN_CS_OPCODES.instance_eval do
-	@gen = 'runtimes/cpp/core/gen-opcodes.rb'
-	@prerequisites << FileTask.new(nil, @gen)
-	def execute
-		sh "ruby #{@gen} cscore #{@NAME}"
-	end
-end
+GEN_OPCODES = GenOpcodesTask.new('ccore', 'runtimes/cpp/core/gen-opcodes.h')
+GEN_CS_OPCODES = GenOpcodesTask.new('cscore', 'runtimes/csharp/windowsphone/mosync/mosyncRuntime/Source/gen-core.cs')
+GEN_JAVA_OPCODES = GenOpcodesTask.new('jcore', 'runtimes/java/Shared/generated/gen-opcodes.h')
 
 class ExtensionIncludeWork < Work
 	def setup
@@ -129,6 +128,7 @@ target :base => [SKINS, RULES] do
 	RULES.invoke
 	GEN_OPCODES.invoke
 	GEN_CS_OPCODES.invoke
+	GEN_JAVA_OPCODES.invoke
 	Work.invoke_subdirs(PRE_DIRS)
 	#Work.invoke_subdir("tools/WrapperGenerator", "compile")
 	Work.invoke_subdir("tools/idl2", "compile")
@@ -188,6 +188,11 @@ target :clean do
 end
 
 target :clean_examples do
+	Work.invoke_subdirs_ex(true, EXAM_DIRS, "clean")
+end
+
+target :clean_all => :clean do
+	Work.invoke_subdirs_ex(true, LIB_DIRS, "clean")
 	Work.invoke_subdirs_ex(true, EXAM_DIRS, "clean")
 end
 

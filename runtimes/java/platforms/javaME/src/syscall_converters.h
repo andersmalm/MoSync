@@ -35,21 +35,6 @@ final void _debug_hex(int hex) {
 #define _debug_hex(hex)
 #endif
 
-/*void debug_MAPoint2d(MAPoint2d p) { DEBUG_SC("("+p.x+","+p.y+")"); }
-MAPoint2d _SYSCALL_CONVERT_MAPoint2d(int ptr) throws Exception {
-_debug_hex(ptr);
-MAPoint2d p = new MAPoint2d(RINT(ptr), RINT(ptr+4));
-debug_MAPoint2d(p);
-return p;
-}
-
-void debug_MARect(MARect p) { DEBUG_SC("("+p.left+","+p.top+","+p.width+","+p.height+")"); }
-MARect _SYSCALL_CONVERT_MARect(int ptr) throws Exception {
-_debug_hex(ptr);				
-MARect r = new MARect(RINT(ptr),RINT(ptr+4),RINT(ptr+8),RINT(ptr+12));
-debug_MARect(r);
-return r;
-}*/
 #define _SYSCALL_CONVERT_MAPoint2d _SYSCALL_CONVERT_MAAddress
 #define _SYSCALL_CONVERT_MARect _SYSCALL_CONVERT_MAAddress
 #define _SYSCALL_CONVERT_MAEVENT _SYSCALL_CONVERT_MAAddress
@@ -60,24 +45,7 @@ final void debug_String(String str) { DEBUG_SC("("+str+")"); }
 #else
 #define debug_String(str)
 #endif
-/*String _SYSCALL_CONVERT_String(int str) throws Exception {
-_debug_hex(str);
-String res = new String();
-char c;
-while(true) {
-byte ret;
-RBYTE(str++, ret);
-c = (char) ret;
 
-if(c == 0)
-break;
-res += c;
-}
-debug_String(res);
-return res;
-}*/
-
-//STATIC char[] gStringConvertBuffer = new char[256];
 STATIC StringBuffer gStringBuffer = new StringBuffer(256);
 final String _SYSCALL_CONVERT_MAString(int str) throws Exception {
 	_debug_hex(str);
@@ -295,7 +263,7 @@ final long ints2long(int hiw, int low) throws Exception {
 
 #define _SYSCALL_CONVERT_ulong(i) (i)
 
-#define _SYSCALL_HANDLERES_DEFAULT(type) REG(REG_r14) = res;\
+#define _SYSCALL_HANDLERES_DEFAULT(type) REG(REG_r0) = res;\
 	LOGSC(") returned "); _debug_hex(res); debug_##type(res); LOGSC("\n");
 
 #define _SYSCALL_HANDLERES_MAAddress _SYSCALL_HANDLERES_DEFAULT(MAAddress)
@@ -310,8 +278,8 @@ final long ints2long(int hiw, int low) throws Exception {
 
 #define _SYSCALL_HANDLERES_longlong \
 	int hiw = (int)res; int low = ((int)(res >> 32));\
-	REG(REG_r14) = hiw; REG(REG_r15) = low; debug_long(res);
+	REG(REG_r0) = hiw; REG(REG_r1) = low; debug_long(res);
 
-#define _SYSCALL_HANDLERES_double _SYSCALL_HANDLERES_longlong
+#define _SYSCALL_HANDLERES_double FREGD(8) = res;
 
 #endif	//SYSCALL_CONVERTERS_H

@@ -5,6 +5,8 @@ require File.expand_path('../../../../rules/targets.rb')
 require File.expand_path('../../../../rules/task.rb')
 require File.expand_path('../../../../rules/loader_md.rb')
 
+default_const(:MSVC, false)
+
 PROJECT_NAME = ENV['PROJECT_NAME']
 JAVA_ME_LIB = ENV['JAVA_ME_LIB']
 TMPCLASS_DIR = ENV['PROJECT_DIR'] + '/tmpclasses'
@@ -36,6 +38,7 @@ JAVAME_SOURCES = [
 	#'ExtensionHandler',
 	#'AudioBufferDataSource',
 	'SplitResourceStream',
+	'Float11',
 ]
 CLDC10_SOURCES = [
 	'Real',
@@ -54,10 +57,10 @@ class JavaPreprocessTask < FileTask
 
 		@DEPFILE = "build/#{@name}.mf"
 		if(!needed?(false)) then
+			#puts "Loading dependencies for #{@NAME}"
 			@prerequisites = MakeDependLoader.load(@DEPFILE, @NAME)
 		end
 	end
-
 	def needed?(log = true)
 		return true if(super(log))
 		if(!File.exists?(@DEPFILE))
@@ -73,8 +76,10 @@ class JavaPreprocessTask < FileTask
 		tempDepFileName = "build/#{@name}.mft"
 
 		#@REM sed reformats gcc's error output so that Visual Studio can understand it
-		sh("xgcc -x c -E -MMD -MF #{tempDepFileName} -D_JavaME -I#{SHARED_DIR} -Isrc" +
-			" -o build/#{@name}.jtmp \"#{@prerequisites[0]}\" 2>&1 | sed -re s/\([a-zA-Z/]\+\)\(.[a-zA-Z]\+\):\([0-9]\+\):/\\1\\2(\\3):/")
+		postfix = MSVC ? " 2>&1 | sed -re s/\([a-zA-Z/]\+\)\(.[a-zA-Z]\+\):\([0-9]\+\):/\\1\\2(\\3):/" : ''
+
+		sh("gcc -x c -E -MMD -MF #{tempDepFileName} -D_JavaME -I#{SHARED_DIR} -Isrc" +
+			" -o build/#{@name}.jtmp \"#{@prerequisites[0]}\""+postfix)
 
 		# problem: if xgcc fails due to a preprocessing error, it doesn't return an error value.
 		# it does, however, output an empty dependency file, which causes later rebuilds to fail.
@@ -141,6 +146,8 @@ work.instance_eval do
 end
 
 target :default do
+	#work.setup
+	#work.dump(0)
 	work.invoke
 end
 

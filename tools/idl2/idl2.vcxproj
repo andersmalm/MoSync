@@ -94,7 +94,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="core.h" />
     <ClInclude Include="extensions.h" />
     <ClInclude Include="maapi_defs.h" />
   </ItemGroup>

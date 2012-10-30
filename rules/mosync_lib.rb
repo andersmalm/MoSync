@@ -171,8 +171,7 @@ def MoSyncLib.invoke(mod)
 		target :default => [:pipe]
 	end
 	target :clean do
-		MoSyncLib.clean(PipeLibWork.new, mod)
-		#MoSyncLib.clean(MoSyncDllWork.new, mod)
+		MoSyncLib.clean(Mapip2LibWork.new, mod)
 	end
 	target :clean_native do
 		MoSyncLib.clean(MoSyncDllWork.new, mod)

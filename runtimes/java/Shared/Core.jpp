@@ -15,21 +15,7 @@ Software Foundation, 59 Temple Place - Suite 330, Boston, MA
 02111-1307, USA.
 */
 
-#ifdef _android
-package com.mosync.java.android;
-
-import android.content.res.Resources;
-import android.util.Log;
-import android.view.View;
-import android.view.SurfaceView;
-import android.view.SurfaceHolder;
-import android.content.Context;
-import android.content.res.AssetFileDescriptor;
-import java.nio.ByteBuffer;
-import java.nio.IntBuffer;
-#endif
-
-#include "generated/core_consts.h"
+#include "generated/gen-opcodes.h"
 #include "helpers.h"
 #include "core_helpers.h"
 //#include "asm_config.h"
@@ -43,15 +29,6 @@ import java.io.*;
 #endif
 
 final public class Core {
-/*
-#ifdef _android
-	STATIC ByteBuffer mMem_csByteBuffer;
-	STATIC ByteBuffer mMem_dsByteBuffer;
-	STATIC ByteBuffer mMem_cpByteBuffer;
-	STATIC ByteBuffer mRegsByteBuffer;
-	
-#endif
-*/
 	STATIC int mMem_ds[];
 	STATIC int mMEM_DS_SIZE;
 	int STACK_BOTTOM;
@@ -59,15 +36,8 @@ final public class Core {
 
 	Syscall mSyscall;
 
-#ifdef _JavaME
 	MainCanvas mCanvas;
-#elif defined(_android)
-	Context mContext;
-	MoSyncView mMoSyncView;
-#else
-#error Bad Java platform!
-#endif
-	
+
 #ifdef GDB_DEBUG
 	GdbStub mGdbStub;
 #endif
@@ -78,7 +48,7 @@ final public class Core {
 
 	public final void destruct() throws Exception {
 		mSyscall.destruct();
-		
+
 #ifdef GDB_DEBUG
 		mGdbStub.closeDebugConnection();
 #endif
@@ -183,39 +153,23 @@ final public class Core {
 
 #ifdef MOSYNC_STATIC_JAVA
 	StaticCode mStaticCode = new StaticCode();
-	int Head_AppCode;
 
-#ifdef _JavaME
 	public Core(MainCanvas aCanvas, String resname) throws Exception {
 		mCanvas = aCanvas;
 		mSyscall = new Syscall(this, aCanvas);
-#elif defined(_android)
-	public Core(MoSyncView view, String resname) throws Exception {
-		mMoSyncView = view;
-		mSyscall = new Syscall(this, mMoSyncView);
-#endif
 		DEBUG_ASSERT(mStaticCode != null);
 		mMem_ds = StaticCode.mem_ds;
 		DEBUG_ASSERT(mMem_ds != null);
 		mMEM_DS_SIZE = mMem_ds.length << 2;
-		Head_AppCode = 0;
-		
+
 		DEBUG_ASSERT(mSyscall != null);
 
 		InputStream resources = GET_RESOURCE(resname);
 		if(resources == null) {
-#ifdef _JavaME
 			mSyscall.LoadResources(null, null);
-#elif defined(_android)
-			mSyscall.LoadResourcesFromStream(null, null);
-#endif
 		} else {
 			LittleEndianDataInputStream llis = new LittleEndianDataInputStream(resources);
-#ifdef _JavaME
 			mSyscall.LoadResources(llis, resname);
-#elif defined(_android)
-			mSyscall.LoadResourcesFromStream(llis, resname);
-#endif
 			llis.close();
 		}
 	}
@@ -234,17 +188,20 @@ final public class Core {
 	// Dynamic
 	//***************************************************************************
 
+#define MA_HEAD_MAGIC 0x5944414d	//MADY
+
 #define _MA_HEAD(m)\
 	m(int, Magic)\
 	m(int, CodeLen)\
 	m(int, DataLen)\
- 	m(int, DataSize)\
+	m(int, DataSize)\
 	m(int, StackSize)\
 	m(int, HeapSize)\
- 	m(int, AppCode)\
+	m(int, CtorAddress)\
+	m(int, DtorAddress)\
+	m(int, BuildID)\
 	m(int, AppID)\
- 	m(int, EntryPoint)\
-	m(int, IntLen)\
+	m(int, EntryPoint)\
 
 #define DEFINE_HEAD_VAR(type, name) STATIC type Head_##name;
 	_MA_HEAD(DEFINE_HEAD_VAR);
@@ -252,8 +209,9 @@ final public class Core {
 	//all member variables have 'm' prefix and (sorta) camel case.
 	STATIC byte mMem_cs[];
 	STATIC int mMem_cp[];
-	
+
 	STATIC int mRegs[];
+	STATIC double mFregs[];
 
 	STATIC int mIP;
 	STATIC boolean mVM_Yield;
@@ -266,7 +224,6 @@ final public class Core {
 	int mLastSyscall = INVALID_SYSCALL_NUMBER;
 #endif
 
-#ifdef _JavaME
 	public Core(MainCanvas aCanvas, String modname, String resname) throws Exception {
 		mCanvas = aCanvas;
 		mSyscall = new Syscall(this, aCanvas);
@@ -289,9 +246,7 @@ final public class Core {
 			llis.close();
 		}
 	}
-#endif
 
-#ifdef _JavaME
 	public Core(MainCanvas aCanvas, InputStream programStream) throws Exception {
 		mCanvas = aCanvas;
 		mSyscall = new Syscall(this, aCanvas);
@@ -304,45 +259,6 @@ final public class Core {
 			mSyscall.LoadResources(file, null);
 		}
 	}
-#endif
-
-#ifdef _android
-	public Core(MoSyncView view) throws Exception {
-		Log.i("MoSync Core","Core Constructor");
-		mMoSyncView = view;
-		mContext = view.getContext();
-		mSyscall = new Syscall(this, mMoSyncView);
-		Log.i("MoSync Core","Core Constructor - syscall created");
-
-		Log.i("MoSync Core","Core Constructor - getResource program");
-		InputStream inPrg = mContext.getResources().openRawResource(R.raw.program);
-
-		Log.i("MoSync Core","Core Constructor - program LittleEndianInputStream");
-		LittleEndianDataInputStream file = new LittleEndianDataInputStream(inPrg);
-		
-		Log.i("MoSync Core","Core Constructor - LoadVMApp");
-		LoadVMApp(file);
-/*
-		if(file.available()==0) {
-			mSyscall.LoadResourcesFromStream(null, false);
-		} else {
-			mSyscall.LoadResourcesFromStream(file, true);
-		}
-*/		
-		InputStream inRes = mContext.getResources().openRawResource(R.raw.resources);
-		Log.i("MoSync Core","Core Constructor - getResource resource");
-		
-		file = new LittleEndianDataInputStream(inRes);
-		if(file.available()==0) {
-			mSyscall.LoadResourcesFromStream(null, 0, false);
-		} else {
-			mSyscall.LoadResourcesFromStream(file, R.raw.resources, false);
-		}
-		inRes.close();
-
-		mSyscall.init();
-	}
-#endif
 
 
 	//***************************************************************************
@@ -352,62 +268,9 @@ final public class Core {
 	final int nextPowerOf2(int min, int x) {	//arguments are assumed to be positive
 		int i = min;
 		while(i < x) {
-			i <<= 1;		
+			i <<= 1;
 		}
 		return i;
-	}
-
-	final void GenConstTable() {
-#ifdef REGS_128
-		int n, p;
-		int mask;
-		int[] regs = mRegs;
-
-		p = 32;
-
-		for (n=1;n<17;n++)
-		{
-			regs[p++] = n;
-			regs[p++] = -n;
-		}
-
-		mask = 0x20;
-
-		for (n=0;n<32-5;n++)
-		{
-			regs[p++] = mask-1;
-			regs[p++] = mask;
-			mask <<= 1;
-		}
-
-		mask = 0x10;
-
-		for (n=0;n<10;n++)
-		{
-			regs[p++] = mask ^ 0xffffffff;
-			mask <<= 1;
-		}
-#else	//256
-		int n;
-		for(n=0;n<32;n++)
-			regs[n] = 0;
-		for(n=1;n<49;n++) {
-			regs[n + 31] = n;
-			regs[n + 79] = -n;
-		}
-		for(n=128;n<256;n++) {
-			int mask = 0x01;
-			int m;
-			for(m=0;m<(n & 0x1f);m++) {
-				mask <<= 1;
-				if((n & 0x40) != 0)
-					mask |= 0x01;
-			}
-			if((n & 0x20) != 0)
-				mask ^= 0xffffffff;
-			regs[n] =  mask;
-		}
-#endif
 	}
 #ifdef MA_PROF_SUPPORT_JAVAPACKAGE_LOCATIONAPI
 	int mCustomEventPointer;
@@ -443,6 +306,7 @@ final public class Core {
 #endif
 
 		// Init regs + IP
+
 #ifdef MA_PROF_SUPPORT_JAVAPACKAGE_LOCATIONAPI
 		//allocate space for location event structs
 		mCustomEventPointer = mCustomMemPointer - MALOCATION_INT_COUNT * 4;
@@ -450,9 +314,11 @@ final public class Core {
 #else
 		regs[REG_sp] = mCustomMemPointer - 16;
 #endif
-		regs[REG_i0] = mMEM_DS_SIZE;
-		regs[REG_i1] = Head_StackSize;
-		regs[REG_i2] = Head_HeapSize;
+		regs[REG_p0] = mMEM_DS_SIZE;
+		regs[REG_p1] = Head_StackSize;
+		regs[REG_p2] = Head_HeapSize;
+		regs[REG_p3] = Head_CtorAddress;
+		regs[REG_g0] = Head_DtorAddress;
 		DDUMP(Head_EntryPoint);
 		mIP = Head_EntryPoint;
 
@@ -463,13 +329,12 @@ final public class Core {
 	final void InitVM()
 #ifdef GDB_DEBUG
 		throws Exception
-#endif 
+#endif
 	{
 		mVM_Yield = false;
 
 		mRegs = new int[NREGS];
-
-		GenConstTable();
+		mFregs = new double[NFREGS];
 
 #ifdef _DEBUG
 		DEBUG("Regs:\n");
@@ -482,7 +347,7 @@ final public class Core {
 #ifdef GDB_DEBUG
 		mGdbStub = new GdbStub(this);
 		mGdbStub.setupDebugConnection();
-#endif 
+#endif
 	}
 
 	void LoadVM(LittleEndianDataInputStream file) throws Exception {
@@ -497,41 +362,24 @@ final public class Core {
 			DEBUG_LOAD("Load Header\n");
 			_MA_HEAD(HEAD_READ_VAR);
 
-			if(Head_Magic != 0x5844414d) {	//MADX
-				DEBUG_ALWAYS("Magic error: 0x"+Integer.toHexString(Head_Magic)+" should be 0x5844414d\n");
+			if(Head_Magic != MA_HEAD_MAGIC) {
+				DEBUG_ALWAYS("Magic error: 0x"+Integer.toHexString(Head_Magic)+" should be "+Integer.toHexString(MA_HEAD_MAGIC)+"\n");
 				BIG_PHAT_ERROR;
 			}
 
 			DEBUG_LOAD("Load Code ("+Head_CodeLen+" bytes)\n");
 			DEBUG_ASSERT(Head_CodeLen > 0);
 			mMem_cs = new byte[Head_CodeLen];
-/*#ifdef _android
-			mMem_csByteBuffer = ByteBuffer.wrap(mMem_cs);
-#endif*/
 
 			file.readFully(mMem_cs);
 
 			mMEM_DS_SIZE = nextPowerOf2(64*1024, Head_DataSize);
 			DUMP(mMEM_DS_SIZE);
-			MYASSERT((mMEM_DS_SIZE & 3) == 0);	
-/*	
-#ifdef _android
-			mMem_dsByteBuffer = ByteBuffer.allocate(mMEM_DS_SIZE);
-			if(mMem_dsByteBuffer.hasArray()) Log.i("MoSync Core", "mMem_ds has array");
-			if(mMem_dsByteBuffer.isDirect()) Log.i("MoSync Core", "mMem_ds is direct");
-			int[] mem_ds = mMem_ds = mMem_dsByteBuffer.asIntBuffer().array();
-#else
-*/
+			MYASSERT((mMEM_DS_SIZE & 3) == 0);
 			int[] mem_ds = mMem_ds = new int[mMEM_DS_SIZE >> 2];
-//#endif
 
 			DEBUG_LOAD("Load Data ("+Head_DataLen+" bytes)\n");
 			if(Head_DataLen > 0) {
-				/*int nDataInts = Head_DataLen / 4;
-				if(nDataInts * 4 != Head_DataLen) {
-				DEBUG_ALWAYS("WARNING: Data section length is unaligned ("+Head_DataLen+")\n");
-				BIG_PHAT_ERROR;
-				}*/
 				int intpart = INTPART(Head_DataLen);
 				for(int i=0; i<intpart; i++) { // Load data
 					mem_ds[i] = file.readInt();
@@ -540,28 +388,6 @@ final public class Core {
 					WBYTE((intpart << 2) + i, (byte)file.read());
 				}
 			}
-
-			DEBUG_LOAD("Load Constants ("+Head_IntLen+" ints)\n");
-
-/*#ifdef _android
-			mMem_cpByteBuffer = ByteBuffer.allocate(Head_IntLen * 4);
-			int[] mem_cp = mMem_cp = mMem_cpByteBuffer.asIntBuffer().array();
-#else*/
-			int[] mem_cp = mMem_cp = new int[Head_IntLen];
-//#endif
-
-			if(Head_IntLen > 0) {
-				for(int i=0; i<Head_IntLen; i++) { // Load constant pool
-					mem_cp[i] = file.readInt();
-				}
-			}
-
-			DEBUG("Constant pool ("+Head_IntLen+" entries):\n");
-			for(int i=0; i<Head_IntLen; i++) {
-				DEBUG(""+i+": 0x"+Integer.toHexString(mem_cp[i])+"("+mem_cp[i]+")\n");
-			}
-			DEBUG("\n");
-
 		} catch(IOException e) {
 			PRINT_STACK_TRACE;
 			BIG_PHAT_ERROR;
@@ -586,15 +412,6 @@ final public class Core {
 		return false;
 	}*/
 
-#ifdef _android
-	public void resizeScreen(int width, int height)
-	{
-		mSyscall.resizeScreen(width, height);
-	}
-#endif
-
-
-
 	//***************************************************************************
 	//Syscalls
 	//***************************************************************************
@@ -615,6 +432,7 @@ final public class Core {
 
 	final void InvokeSysCall(int type) throws Exception {
 		int[] regs = mRegs;
+		double[] fregs = mFregs;
 #ifdef PUBLIC_DEBUG
 		mLastSyscall = type;
 #endif
@@ -650,6 +468,8 @@ final public class Core {
 #undef EXEC_RETURN
 #endif	//GDB_DEBUG
 
+	// System.arraycopy is the fastest way to implement memset() in JavaME.
+	// We start with one byte and exponentially increase the length of the copies.
 	public static void bytefill(byte[] array, byte value) {
 		int len = array.length;
 		if (len > 0)
@@ -659,15 +479,33 @@ final public class Core {
 	}
 
 	public void interrupt() {
-		//set all instructions to ENDOP
-		bytefill(mMem_cs, (byte)ENDOP);
+		//set all instructions to BREAK
+		bytefill(mMem_cs, (byte)OP_BREAK);
 	}
+
+	private static final char[] digits = {
+		'0','1','2','3','4','5','6','7',
+		'8','9','a','b','c','d','e','f',
+	};
+
+	public static String unsignedLongToHexString(long i) {
+		char[] buf = new char[64];
+		int charPos = 64;
+		do {
+			 buf[--charPos] = digits[(int)(i & 0xf)];
+			 i >>>= 4;
+		} while (i != 0);
+		buf[--charPos] = 'x';
+		buf[--charPos] = '0';
+		return new String(buf, charPos, (64 - charPos));
+	}
+
 #endif	//MOSYNC_STATIC_JAVA
 /*
-	static 
-	{ 
-		System.loadLibrary("mosync"); 
-	} 
+	static
+	{
+		System.loadLibrary("mosync");
+	}
 */
 }
 

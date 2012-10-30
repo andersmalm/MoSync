@@ -15,29 +15,11 @@ Software Foundation, 59 Temple Place - Suite 330, Boston, MA
 02111-1307, USA.
 */
 
-#ifdef _android
-package com.mosync.java.android;
-
-import android.graphics.Bitmap;
-import android.graphics.Canvas;
-#elif defined(_JavaME)
 import javax.microedition.lcdui.*;
-#endif
 
 final class ImageCache {
-#ifdef _JavaME
 	Image i;
 	Graphics g;
 
 	ImageCache(Image im) { i = im; }
-#elif defined(_android)
-	Bitmap mBitmap;
-	Canvas mCanvas;
-	
-	ImageCache(Canvas canvas, Bitmap bitmap)
-	{  
-		mCanvas = canvas;
-		mBitmap = bitmap;
-	}
-#endif
 }

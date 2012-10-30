@@ -202,7 +202,7 @@ class GccWork < BuildWork
 		end
 
 		@all_sourcefiles = cfiles + cppfiles
-		@all_sourcefiles.sort! do |a,b| b.timestamp <=> a.timestamp end
+		@all_sourcefiles.sort! do |a,b| b.newDate <=> a.newDate end
 
 		@source_objects = objects(@all_sourcefiles)
 		all_objects = @source_objects + @EXTRA_OBJECTS

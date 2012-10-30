@@ -21,30 +21,25 @@ Software Foundation, 59 Temple Place - Suite 330, Boston, MA
 
 #define USE_VAR_INT
 #define STATIC //static
-#define REGS_128	//256
 
-#ifdef REGS_128
-#define NREGS 128
+#define NREGS 32
+#define NFREGS 16
+
 #define FETCH_CODEBYTE_FAST mem_cs[IP++]
-#else
-#define NREGS 256
-#error This looks bad...
-#define FETCH_CODEBYTE_FAST FETCH_CODEBYTE
-#endif	//REGS_128
+#define IB FETCH_CODEBYTE_FAST
 
 #define FETCH_CODEBYTE (((int)mem_cs[IP++]) & 0x0ff)
 
-#define OPC(opcode)	case opcode: DEBUG(""+Integer.toHexString(IP-1)+": "+opcode+" "+#opcode);
+#define OPC(opcode)	case OP_##opcode: DEBUG(""+Integer.toHexString(IP-1)+": "+OP_##opcode+" "+#opcode);
 #define EOP	DEBUG("\n"); break
 
 #define REG(nn)	regs[nn]
 
+#define FREGD(nn) fregs[nn]
+
 #define	RD	regs[rd]
 #define	RS	regs[rs]
-//#define	RDU	(*(unsigned long*)&regs[rd])
-//#define	RSU	(*(unsigned long*)&regs[rs])
 
-//#define IMMU	((unsigned long) imm32)
 #define IMM	((int) imm32)
 
 #define G_CLOSING mCanvas.mClosing
@@ -53,8 +48,8 @@ Software Foundation, 59 Temple Place - Suite 330, Boston, MA
 #define	JMP_IMM	JMP_ARG(IMM);
 #define	JMP_RD	JMP_ARG(RD);
 
-#define	CALL_IMM	REG(REG_rt) = (int)IP; JMP_IMM;
-#define	CALL_RD		REG(REG_rt) = (int)IP; JMP_RD;
+#define	CALL_IMM	REG(REG_ra) = (int)IP; JMP_IMM;
+#define	CALL_RD		REG(REG_ra) = (int)IP; JMP_RD;
 
 #ifdef _DEBUG
 #define FETCH_RD	rd = FETCH_CODEBYTE_FAST; DEBUG(" rd"+rd+"("); _debug_hex(REG(rd)); DEBUG(")");
@@ -65,30 +60,16 @@ Software Foundation, 59 Temple Place - Suite 330, Boston, MA
 #endif	//_DEBUG
 
 
-#ifdef USE_VAR_INT
-#define FETCH_INT_BASE imm32 = FETCH_CODEBYTE_FAST; if(imm32<0)\
- {imm32=((imm32&127)<<8)+FETCH_CODEBYTE;}
-#define FETCH_CONST FETCH_INT_BASE DEBUG(" c["+imm32+"]");\
-	imm32=mem_cp[imm32]; DEBUG("("+imm32+")");
-#define FETCH_INT FETCH_INT_BASE DEBUG(" i"+imm32);
-
-#else
-
-#define FETCH_CONST	imm32 = FETCH_CODEBYTE; imm32=(imm32<<8)+FETCH_CODEBYTE;\
-	imm32=mem_cp[imm32]; DEBUG(" c["+imm32+"]");
-#define FETCH_INT imm32 = FETCH_CODEBYTE; imm32=(imm32<<8)+FETCH_CODEBYTE; DEBUG(" i"+imm32);
-#endif	//USE_VAR_INT
+#define FETCH_CONST	FETCH_IMM32
+#define FETCH_INT FETCH_IMM32
 
 
-#define FETCH_IMM16	imm32 = FETCH_CODEBYTE << 8; imm32 += FETCH_CODEBYTE;\
-	DEBUG(" m"+imm32+"(0x"+Integer.toHexString(imm32)+")");
-
-#define FETCH_IMM24	imm32 = FETCH_CODEBYTE << 16; imm32 += FETCH_CODEBYTE << 8;\
-	imm32 += FETCH_CODEBYTE; DEBUG(" i"+imm32+"(0x"+Integer.toHexString(imm32)+")");
-
-/*#define FETCH_IMM32	imm32 = FETCH_CODEBYTE_FAST << 24; imm32 += FETCH_CODEBYTE << 16;\
-	imm32 += FETCH_CODEBYTE << 8;	imm32 += FETCH_CODEBYTE;\
+/*#define FETCH_IMM16	imm32 = FETCH_CODEBYTE << 8; imm32 += FETCH_CODEBYTE;\
 	DEBUG(" m"+imm32+"(0x"+Integer.toHexString(imm32)+")");*/
+
+#define FETCH_IMM32	imm32 = FETCH_CODEBYTE; imm32 += FETCH_CODEBYTE << 8;\
+	imm32 += FETCH_CODEBYTE << 16; imm32 += FETCH_CODEBYTE << 24;\
+	DEBUG(" i"+imm32+"(0x"+Integer.toHexString(imm32)+")");
 
 
 #define FETCH_IMM8	imm32 = FETCH_CODEBYTE; DEBUG(" n"+imm32);
@@ -96,17 +77,39 @@ Software Foundation, 59 Temple Place - Suite 330, Boston, MA
 #define FETCH_RD_RS			FETCH_RD FETCH_RS
 #define FETCH_RD_CONST		FETCH_RD FETCH_CONST
 #define FETCH_RD_RS_CONST	FETCH_RD FETCH_RS FETCH_CONST
-#define FETCH_RD_RS_ADDR	FETCH_RD FETCH_RS FETCH_IMM16
-
-
-// !!>> Added ARH - pls check 16-01-2007
-#define FETCH_RD_RS_ADDR24	FETCH_RD FETCH_RS FETCH_IMM24
-// !!<<
-
+#define FETCH_RD_RS_ADDR	FETCH_RD FETCH_RS FETCH_IMM32
 #define FETCH_RD_IMM8		FETCH_RD FETCH_IMM8
+
+#define FETCH_FRD_RS		FETCH_FRD FETCH_RS
+#define FETCH_FRD_FRS		FETCH_FRD FETCH_FRS
+#define FETCH_FRD_CONST	FETCH_FRD FETCH_CONST
+#define FETCH_FRD_FRS_CONST	FETCH_FRD FETCH_FRS FETCH_CONST
+#define FETCH_RD_FRS_CONST	FETCH_RD FETCH_FRS FETCH_CONST
+#define FETCH_RD_FRS FETCH_RD FETCH_FRS
+
+
+#define FRD freg[rd]
+#define FRS freg[rs]
+
+#define DOUBLE2HEX(d) unsignedLongToHexString(Double.doubleToLongBits(d))
+
+#define FETCH_FRD	rd = IB; DEBUG(" frd"+rd+"("+DOUBLE2HEX(FRD)+", "+FRD+")");
+#define FETCH_FRS	rs = IB; DEBUG(" frs"+rd+"("+DOUBLE2HEX(FRS)+", "+FRS+")");
+
+#define rdlo (rd+1)
+#define rdhi rd
+#define RDLO REG(rdlo)
+#define RDHI REG(rdhi)
+#define addrlo (addr + 4)
+#define addrhi addr
+#define RSLO REG(rs+1)
+#define RSHI RS
+
 
 #define UINT(a) ((long)(a) & 0x0ffffffffL)
 #define OPU(a, oper, b) (UINT(a) oper UINT(b))
+
+#define WRITE_REG(rd, data) REG(rd) = (data)
 
 #define ARITH(a, oper, b) DEBUG("\t"+(a)+" "+#oper+" "+(b)+" = "); a oper##= (b);\
 	DEBUG(""+(a));
