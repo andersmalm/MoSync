@@ -21,6 +21,9 @@ require "#{File.dirname(__FILE__)}/util.rb"
 module GccFlags
 def define_cflags
 
+#only valid in GCC 4.7 and later
+gcc47_warnings = ' -Wunused-local-typedefs -ftrack-macro-expansion'
+
 #only valid in GCC 4.3 and later
 gcc43_warnings = ''
 gcc43_warnings << ' -Wvla' if(!isPipeWork)
@@ -91,6 +94,9 @@ if(@GCC_IS_V4) then
 		version_warnings += gcc43_c_warnings + gcc43_warnings
 		cpp_flags += " -std=gnu++0x -DHAVE_TR1"
 	end
+	if(@GCC_V4_SUB >= 7)
+		version_warnings << gcc47_warnings
+	end
 end
 if(!(@GCC_IS_V4 && @GCC_V4_SUB >= 3)) then
 	lesser_conly += gcc43_c_warnings
@@ -119,15 +125,11 @@ elsif(HOST == :linux)
 	end
 	@HOST_CPPFLAGS = ""
 elsif(HOST == :darwin)
-# fix for OS X 10.8 Mountain Lion
-#	sdkAdress = "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.7.sdk"
-#	if(!File.exist?(sdkAdress))
-#		sdkNumber = (File.exist?("/Developer/SDKs/MacOSX10.5.sdk")) ? "5":"6"
-#		sdkAdress = "/Developer/SDKs/MacOSX10.#{sdkNumber}.sdk"
-#	end
-	sdkNumber = (File.exist?("/Developer/SDKs/MacOSX10.5.sdk")) ? "5":"6"
-	sdkAdress = "/Developer/SDKs/MacOSX10.#{sdkNumber}.sdk"
-
+	sdkAdress = "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.7.sdk"
+	if(!File.exist?(sdkAdress))
+		sdkNumber = (File.exist?("/Developer/SDKs/MacOSX10.5.sdk")) ? "5":"6"
+		sdkAdress = "/Developer/SDKs/MacOSX10.#{sdkNumber}.sdk"
+	end
 	@HOST_FLAGS = " -isysroot #{sdkAdress} -mmacosx-version-min=10.5 -DDARWIN"
 	@HOST_CPPFLAGS = " -isysroot #{sdkAdress} -mmacosx-version-min=10.5 -fPIC"
 else

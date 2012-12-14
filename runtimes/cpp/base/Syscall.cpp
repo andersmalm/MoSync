@@ -623,6 +623,7 @@ namespace Base {
 
 	SYSCALL(int, maCreateData(MAHandle placeholder, int size)) {
 #ifndef _android
+        if(size < 0) return RES_OUT_OF_MEMORY;
 		MemStream* ms = new MemStream(size);
 #else
 		char* b = SYSCALL_THIS->loadBinary(placeholder, size);
@@ -639,7 +640,9 @@ namespace Base {
 	SYSCALL(int, maGetDataSize(MAHandle data)) {
 		Stream* b = SYSCALL_THIS->resources.get_RT_BINARY(data);
 		int len;
-		DEBUG_ASSERT(b->length(len));
+		bool res = b->length(len);
+		DEBUG_ASSERT(res);
+		//DEBUG_ASSERT(b->length(len));
 		return len;
 	}
 	SYSCALL(void, maReadData(MAHandle data, void* dst, int offset, int size)) {
@@ -1244,7 +1247,7 @@ namespace Base {
 		return fileSpace(file, SPACE_TOTAL);
 	}
 
-	int Syscall::maFileDate(MAHandle file) {
+	s64 Syscall::maFileDate(MAHandle file) {
 		LOGF("maFileDate(%i)\n", file);
 		FileHandle& fh(getFileHandle(file));
 		time_t t;
@@ -1269,8 +1272,8 @@ namespace Base {
 			}
 			t = st.st_mtime;
 		}
-		LOGF("mtime: %i\n", (int)t);
-		return (int)t;
+		LOGF("mtime: %" PFZT "\n", t);
+		return t;
 	}
 
 	int Syscall::maFileTruncate(MAHandle file, int offset) {
@@ -1321,6 +1324,8 @@ namespace Base {
 
 	int Syscall::maFileReadToData(MAHandle file, MAHandle data, int offset, int len) {
 		LOGF("maFileReadToData(%i, %i)\n", file, len);
+        if(len < 0) FILE_FAIL(MA_FERR_GENERIC);
+
 		FileHandle& fh(getFileHandle(file));
 		Stream* b = SYSCALL_THIS->resources.get_RT_BINARY(data);
 		MYASSERT(b->seek(Seek::Start, offset), ERR_DATA_OOB);

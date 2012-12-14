@@ -111,7 +111,6 @@ int maketempfile( int nof, FILE *fp )
 	int i;
 	FILE *fp2;
 	byte *tmp;
-	int res;
 
 	for( i=0; i<nof; ++i )
 	{
@@ -119,6 +118,7 @@ int maketempfile( int nof, FILE *fp )
 		if( fp2 == NULL ) { printf("error: could not open %s\n", inputfiles[i]); return 0; }
 		else
 		{
+			int res;
 			tmp = (byte *) calloc( sizefile( inputfiles[i] ), sizeof( byte ) );
 			res = fread( tmp, sizefile( inputfiles[i] ), 1, fp2 );
 			if(res != 1)
