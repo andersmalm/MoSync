@@ -56,7 +56,7 @@ class RuntimeBuilder
 		#       dirs. config_platform.h is located in output dir. That one
 		#       should override any other.
 		#
-		sh("xgcc -x c -E -o #{output_dir}/#{jtmp_file} -D#{platform_define} -I#{output_dir} -I#{$SETTINGS[:java_source]}/Shared -I#{platform_dir}" +
+		sh("gcc -x c -E -o #{output_dir}/#{jtmp_file} -D#{platform_define} -I#{output_dir} -I#{$SETTINGS[:java_source]}/Shared -I#{platform_dir}" +
 		       " #{src_dir}#{src_file} 2>&1 | sed \"s/\\([a-zA-Z/]\\+\\)\\(.[a-zA-Z]\\+\\):\\([0-9]\\+\\):/\\1\\2(\\3):/\"")
 
 		# Use sed to comment the lines which the proprocessor added to the file and save it as a java file
@@ -84,6 +84,7 @@ class RuntimeBuilder
 		runtime_dir = Pathname::new( runtime_dir ).realpath.to_s
 
 		java_me_sdk = Pathname::new( "#{$SETTINGS[:javame_sdk]}" ).realpath.to_s
+		java_me_lib = $SETTINGS[:javame_lib]
 
 		if ENV['JAVAMESDKDIR'] != nil
 			java_me_sdk = ENV['JAVAMESDKDIR']
@@ -118,7 +119,7 @@ class RuntimeBuilder
 		# Preprocess all the platform dependant java files and store result in temporary location
 		Dir.foreach(java_me_source) {|x|
 			if (x == "MainCanvas.jpp" || x == "MAMidlet.jpp" || x == "Syscall.jpp" || x == "Core.jpp" ||
-				(x == "Real.jpp" && cldc10) || x == "SplitResourceStream.jpp")
+				(x == "Real.jpp" && cldc10) || x == "SplitResourceStream.jpp" || (x == "Float11.jpp" && !cldc10))
 				preprocess_java_file(x, "#{java_me_source}/", java_me_source, temp_dir, "_JavaME")
 			end
 		}
@@ -129,7 +130,7 @@ class RuntimeBuilder
 		# Compile Java source
 		puts "\nCompiling java source.."
 		sh("javac -source 1.4 -target 1.4 -d #{class_dir} -classpath #{class_dir} -bootclasspath " +
-			libjars.collect { |jar| "#{java_me_sdk}/j2melib/#{jar}.jar#{File::PATH_SEPARATOR}" }.join('') +
+			libjars.collect { |jar| "#{java_me_sdk}/#{java_me_lib}/#{jar}.jar#{File::PATH_SEPARATOR}" }.join('') +
 			extra_classpath_jars.collect { |jar|"#{jar}#{File::PATH_SEPARATOR}" }.join('') +
 			" #{temp_dir}/*.java")
 
@@ -166,7 +167,7 @@ class RuntimeBuilder
 		FileUtils.cd temp_dir
 		sh("java -jar #{java_me_sdk}/bin/proguard.jar -injars #{runtime_dir}/MoSyncRuntimeTemp.jar " +
 			"-dontnote " +
-			libjars.collect { |jar| "-libraryjars #{java_me_sdk}/j2melib/#{jar}.jar " }.join('') +
+			libjars.collect { |jar| "-libraryjars #{java_me_sdk}/#{java_me_lib}/#{jar}.jar " }.join('') +
 			extra_classpath_jars.collect { |jar| "-libraryjars #{jar} " }.join('') +
 			" -dontusemixedcaseclassnames" +
 			" -microedition" +

@@ -579,112 +579,10 @@ TAlphaBitmap* Syscall::loadSprite(TAlphaBitmap* src, ushort left, ushort top,
 //******************************************************************************
 //Proper syscalls
 //******************************************************************************
-#if 0//!defined(__SERIES60_3X__)	//S60v2
 
-extern "C" {
-#include "softfloat.h"
-
-/*
-int float_detect_tininess = float_tininess_after_rounding;
-fp_rnd float_rounding_mode = float_round_nearest_even;
-fp_except float_exception_flags;
-fp_except float_exception_mask;
-*/
-}
-
-void float_raise( fp_except type) {
-	LOGD("float_raise(0x%x)\n", type);
-	//BIG_PHAT_ERROR(ERR_INTERNAL);
-}
-
-float64 __negdf2(float64 a)
-{
-	/* libgcc1.c says -a */
-	return a ^ FLOAT64_MANGLE(0x8000000000000000ULL);
-}
-
-#define F64(d) MAKE(float64, d)
-
-SYSCALL(double, __adddf3(double a, double b)) {
-	float64 result = float64_add(F64(a), F64(b));
-	return MAKE(double, result);
-}
-
-SYSCALL(double, __subdf3(double a, double b)) {
-	float64 result = float64_sub(F64(a), F64(b));
-	return MAKE(double, result);
-}
-
-SYSCALL(double, __muldf3(double a, double b)) {
-	float64 result = float64_mul(F64(a), F64(b));
-	return MAKE(double, result);
-}
-
-SYSCALL(double, __divdf3(double a, double b)) {
-	float64 result = float64_div(F64(a), F64(b));
-	return MAKE(double, result);
-}
-
-SYSCALL(double, __negdf2(double a)) {
-	float64 result = ::__negdf2(F64(a));
-	return MAKE(double, result);
-}
-SYSCALL(int, __fixdfsi(double a)) {
-	return float64_to_int32_round_to_zero(F64(a));
-}
-SYSCALL(double, __floatsidf(int a)) {
-	float64 result = int32_to_float64(a);
-	return MAKE(double, result);
-}
-
-SYSCALL(double, f2d(float f)) {
-	float64 result = float32_to_float64(MAKE(float32, f));
-	return MAKE(double, result);
-}
-SYSCALL(int, dcmp(double a, double b)) {
-	if(float64_lt(F64(b), F64(a)))
-		return 1;
-	else if(float64_eq(F64(a), F64(b)))
-		return 0;
-	else	//a < b		//or NaN!
-		return -1;
-}
-#endif	//S60v2
-
-SYSCALL(double, sin(double x)) {
-	double d;
-	//LOGD("sin(%f %016LX)\n", x, MAKE(TInt64, x));
-
-	//bugfix for 6630
-	if(x == 0)
-		return 0;
-	//LOGD("sin(%f %016LX)\n", x, MAKE(TInt64, x));
-	int result = Math::Sin(d, x);
-	if(result == -6) {
-		LOGD("sin error, returning 1\n");
-		/*LOGD("Returning NaN\n");
-		const TInt64 nan = MAKE_TINT64(0x7ff80000, 0x00000000);
-		double d = MAKE(double, nan);
-		LOGD("Returning NaN 2\n");*/
-		return 1;
-	}
-	LHEL(result);
-	LOGC("sin(%f %016LX) = %f %016LX\n", x, MAKE(TInt64, x), d, MAKE(TInt64, d));
-	return d;
-}
-SYSCALL(double, cos(double x)) {
-	double d;
-	LHEL(Math::Cos(d, x));
-	return d;
-}
 SYSCALL(double, tan(double x)) {
 	double d;
 	LHEL(Math::Tan(d, x));
-	return d;
-}
-SYSCALL(double, sqrt(double x)) {
-	double d;
-	LHEL(Math::Sqrt(d, x));
 	return d;
 }
 
@@ -1168,13 +1066,13 @@ SYSCALL(int, maGetEvent(MAEvent* ep)) {
 	return gAppView.GetEvent(ep);
 }
 
-SYSCALL(int, maTime()) {
+SYSCALL(s64, maTime()) {
 	TTime ut;
 	ut.UniversalTime();
 	return unixTime(ut);
 }
 
-SYSCALL(int, maLocalTime()) {
+SYSCALL(s64, maLocalTime()) {
 	TTime ht;
 	ht.HomeTime();
 	return unixTime(ht);
@@ -2124,7 +2022,7 @@ static int translateFErr(int res, const char* file, int line) {
 
 // TODO: Share these two with Base. Implement FileStream::mTime and truncate.
 // Or not; stat() isn't very implemented on Symbian, I think.
-int Syscall::maFileDate(MAHandle file) {
+s64 Syscall::maFileDate(MAHandle file) {
 	LOGD("maFileDate(%i)\n", file);
 	FileHandle& fh(getFileHandle(file));
 	TTime modTime;

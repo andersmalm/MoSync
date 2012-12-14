@@ -296,7 +296,7 @@ def runBuildTasks ( srcPath, workList, maxThreads = 4 )
                 # Only log to console once a work package has
                 # finished and only allow one thread to do it
                 # at a time.
-                consoleMutex.synchronize do |e|
+                consoleMutex.synchronize do
                     puts "#{workList[j].getLog( ).join( )}"
                 end
             end

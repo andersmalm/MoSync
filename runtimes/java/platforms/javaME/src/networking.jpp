@@ -116,7 +116,7 @@ NETSYSCALL(int) maConnGetAddr(MAHandle conn, Address addr) throws Exception {
 			ServiceRecord sr = ld.getRecord(masc.notifier);
 			String curl = sr.getConnectionURL(0, false);
 			DEBUG_CONN(curl + "\n");
-			int port = Integer.parseInt(curl.substring(21, curl.indexOf(';', 21)));	
+			int port = Integer.parseInt(curl.substring(21, curl.indexOf(';', 21)));
 			MYASSERT(port > 0 && port <= 30);
 			DEBUG_CONN("port: " + port + "\n");
 
@@ -144,6 +144,7 @@ NETSYSCALL(int) maConnGetAddr(MAHandle conn, Address addr) throws Exception {
 
 final void writeInet4AddressToMemory(String s, Address dst) {
 	DEBUG_ALWAYS("inet4: '"+s+"'\n");
+	INIT_MEMDS;
 	int pos = 0;
 	int inet4 = 0;
 	// top byte is most significant.

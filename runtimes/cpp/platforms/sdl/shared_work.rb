@@ -36,8 +36,8 @@ def setup_common
 
 	elsif(HOST == :darwin)
 		@LOCAL_LIBS << "gsm_amr"
-		@LIBRARIES = common_libraries + ["SDL_sound", "SDLmain", "expat", "freeimage", "ssl", "crypto"]
-		@EXTRA_INCLUDES = common_includes + ["/sw/include", "/opt/local/include"]
+		@LIBRARIES = common_libraries + ["SDL_sound", "SDLmain", "expat", "freeimage", "ssl", "crypto", 'GLEW']
+		@EXTRA_INCLUDES = common_includes + ["/opt/local/include"]
 	else
 		error "Unsupported platform"
 	end

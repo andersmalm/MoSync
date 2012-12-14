@@ -9,14 +9,15 @@ SOURCEPATH        ..\data
 RESOURCE          MoSync.rss
 RESOURCE          MoSync_caption.rss
 
+SOURCEPATH        ..\src
+SOURCE            float2.cpp
+SOURCE            RCondVar.cpp
+SOURCE            CSmsHandler.cpp
+
 #include "..\MoSync-base.mmp"
 
 LIBRARY           etel.lib
 LIBRARY           gsmbas.lib
 LIBRARY           PlatformEnv.lib
-
-SOURCEPATH        ..\src
-SOURCE            RCondVar.cpp
-SOURCE            CSmsHandler.cpp
 
 AIF               MoSync.aif ..\aif MoSyncAif.rss

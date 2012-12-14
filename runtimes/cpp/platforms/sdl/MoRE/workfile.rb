@@ -3,6 +3,16 @@
 require File.expand_path('../shared_work.rb')
 require File.expand_path('../../../../../rules/mosync_util.rb')
 
+class WindresTask < FileTask
+	def initialize(work, src)
+		@src = src
+		super(work, "build/#{File.basename(src)}.o")
+	end
+	def execute
+		sh "windres #{@src} #{@NAME}"
+	end
+end
+
 work = MoSyncExe.new
 class << work
 	include SdlCommon
@@ -28,6 +38,10 @@ work.instance_eval do
 	end
 	if(HOST == :win32)
 		@EXTRA_LINKFLAGS = ' -mwindows'
+		@EXTRA_OBJECTS = [WindresTask.new(work, '../sdl.rc')]
+	end
+	if(HOST == :darwin)
+		@EXTRA_INCLUDES << "#{BD}/tools/ReleasePackageBuild/build_package_tools/include"
 	end
 
 	@LOCAL_LIBS = ["mosync_sdl", "demangle"] + @LOCAL_LIBS

@@ -1,14 +1,14 @@
 # Copyright (C) 2009 Mobile Sorcery AB
-# 
+#
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License, version 2, as published by
 # the Free Software Foundation.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program; see the file COPYING.  If not, write to the Free
 # Software Foundation, 59 Temple Place - Suite 330, Boston, MA
@@ -31,8 +31,9 @@ module NativeMoSyncWork
 			custom_lib_dir = bd+"/tools/ReleasePackageBuild/build_package_tools/lib/"
 			need(:@CUSTOM_LIBS)
 			@CUSTOM_LIBS.each { |cl| @EXTRA_LINKFLAGS += " " + custom_lib_dir + cl }
-		elsif(HOST == :darwin) 
-			@EXTRA_INCLUDES += ["/sw/include", "/opt/local/include", bd+"/tools/ReleasePackageBuild/build_package_tools/include"]
+		elsif(HOST == :darwin)
+#			@EXTRA_INCLUDES += ["/sw/include", "/opt/local/include", bd+"/tools/ReleasePackageBuild/build_package_tools/include"]
+			@EXTRA_INCLUDES << '/opt/local/include'
 		end
 		@EXTRA_INCLUDES += [bd+"/intlibs", bd+"/libs"]
 		@EXTRA_CFLAGS += " -D_POSIX_SOURCE"	#avoid silly bsd functions

@@ -15,11 +15,6 @@ Software Foundation, 59 Temple Place - Suite 330, Boston, MA
 02111-1307, USA.
 */
 
-#define LTD(x) Double.longBitsToDouble(x)
-#define DTL(x) Double.doubleToLongBits(x)
-#define ITF(x) Float.intBitsToFloat(x)
-#define FTI(x) Float.floatToIntBits(x)
-
 #ifdef MA_PROF_SUPPORT_CLDC_10
 	// used for storing the doubles/floats when doing the arithmetical operations
 	// so we don't need to allocate them for each operation.
@@ -28,10 +23,10 @@ Software Foundation, 59 Temple Place - Suite 330, Boston, MA
 #endif
 
 #ifdef MA_PROF_SUPPORT_CLDC_10
-	SYSCALL(long) tan(long xl) {
-		tempRealA.assignDoubleBits(xl);
+	SYSCALL(Real) tan(Real x) {
+		tempRealA.assign(x);
 		tempRealA.tan();
-		return tempRealA.toDoubleBits();
+		return tempRealA;
 	}
 #else /* MA_PROF_SUPPORT_CLDC11 */
 	SYSCALL(double) tan(double x) {

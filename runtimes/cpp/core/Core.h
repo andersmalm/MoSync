@@ -116,7 +116,7 @@ namespace Core {
 		int regs[NUM_REGS];
 		union FREG {
 			double d;
-			uint64_t ll;
+			u64 ll;
 			int i[2];
 		};
 		FREG freg[NUM_FREGS];

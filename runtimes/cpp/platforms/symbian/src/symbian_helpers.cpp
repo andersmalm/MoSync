@@ -32,6 +32,7 @@ Software Foundation, 59 Temple Place - Suite 330, Boston, MA
 #include "AppUi.h"
 
 #include <helpers/log.h>
+#include <helpers/maapi_defs.h>
 
 #ifdef LOGGING_ENABLED
 
@@ -483,7 +484,7 @@ void MoSyncErrorExit(int errorCode) {
 	if(core) if(core->mem_cs) {
 		TBuf<4> appCode(4);
 		for(int i=0; i<4; i++) {
-			appCode[i] = (byte)(core->Head.AppCode >> ((3-i)*8));
+			appCode[i] = (byte)(core->Head.BuildID >> ((3-i)*8));
 		}
 #ifdef PUBLIC_DEBUG
 		//TODO: check to see if running.
@@ -511,13 +512,21 @@ void MoSyncErrorExit(int errorCode) {
 //***************************************************************************
 
 _LIT(KEpochStart, "19700000:");
-int unixTime(const TTime& tt) {
+s64 unixTime(const TTime& tt) {
 	TTime epochStart(KEpochStart);
-	return I64INT((tt.Int64() - epochStart.Int64()) / 1000000);
+	TInt64 t;
+	t = ((tt.Int64() - epochStart.Int64()) / 1000000);
+	MA_DV dv;
+	dv.MA_DV_HI = I64HIGH(t);
+	dv.MA_DV_LO = I64LOW(t);
+	return dv.ll;
 }
-TTime symbianTime(int unixTime) {
+TTime symbianTime(s64 unixTime) {
 	TTime epochStart(KEpochStart);
-	return TTime(epochStart.Int64() + TInt64(unixTime) * 1000000);
+	MA_DV dv;
+	dv.ll = unixTime;
+	TInt64 t(MAKE_TINT64(dv.MA_DV_HI, dv.MA_DV_LO));
+	return TTime(epochStart.Int64() + t * 1000000);
 }
 
 

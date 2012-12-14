@@ -19,6 +19,7 @@ Software Foundation, 59 Temple Place - Suite 330, Boston, MA
 #include "helpers.h"
 #include "core_helpers.h"
 //#include "asm_config.h"
+#include "Float.h"
 
 import java.io.*;
 
@@ -211,7 +212,7 @@ final public class Core {
 	STATIC int mMem_cp[];
 
 	STATIC int mRegs[];
-	STATIC double mFregs[];
+	STATIC DOUBLE mFregs[];
 
 	STATIC int mIP;
 	STATIC boolean mVM_Yield;
@@ -334,7 +335,13 @@ final public class Core {
 		mVM_Yield = false;
 
 		mRegs = new int[NREGS];
-		mFregs = new double[NFREGS];
+		mFregs = new DOUBLE[NFREGS];
+
+#ifdef MA_PROF_SUPPORT_CLDC_10
+		for(int i=0; i<NFREGS; i++) {
+			mFregs[i] = new Real();
+		}
+#endif
 
 #ifdef _DEBUG
 		DEBUG("Regs:\n");
@@ -432,7 +439,7 @@ final public class Core {
 
 	final void InvokeSysCall(int type) throws Exception {
 		int[] regs = mRegs;
-		double[] fregs = mFregs;
+		DOUBLE[] fregs = mFregs;
 #ifdef PUBLIC_DEBUG
 		mLastSyscall = type;
 #endif

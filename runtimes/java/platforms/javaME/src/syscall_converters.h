@@ -210,6 +210,7 @@ final void debug_double(long l, double a) {
 #define debug_double(l, d)
 #endif	//DEBUG_SYSCALLS
 
+#if 0
 #ifdef DEBUG_SYSCALLS
 final void debug_float(int i) throws Exception {
 	float f = _SYSCALL_CONVERT_float(i);
@@ -246,6 +247,7 @@ final float _SYSCALL_CONVERT_float(int i) throws Exception {
 #define debug_float(i)
 #define debug_double(l, d)
 #endif	// MA_PROF_SUPPORT_CLDC_10
+#endif	//0
 
 //#ifdef MOSYNC_STATIC_JAVA
 #define _SYSCALL_CONVERT_long(hi, lo) ints2long(lo, hi)
@@ -280,6 +282,6 @@ final long ints2long(int hiw, int low) throws Exception {
 	int hiw = (int)res; int low = ((int)(res >> 32));\
 	REG(REG_r0) = hiw; REG(REG_r1) = low; debug_long(res);
 
-#define _SYSCALL_HANDLERES_double FREGD(8) = res;
+#define _SYSCALL_HANDLERES_double DASSIGN(FREGD(8), res);
 
 #endif	//SYSCALL_CONVERTERS_H

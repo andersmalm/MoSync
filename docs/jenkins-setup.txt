@@ -1,0 +1,93 @@
+This guide will tell you how to set up machines to build MoSync's GCC4 toolchain and other components.
+Later, it will also tell how to set up the Jenkins master server.
+
+13:20 2012-10-30
+Linux slave:
+Starting with Mint 13 (Maya)/Cinnamon/x64:
+ Will probably work with *buntu 11.10 or later.
+
+sudo apt-get install git ruby g++ libsdl1.2-dev libbluetooth-dev libssl-dev libexpat1-dev libglew1.6-dev libgtk2.0-dev libsdl-image1.2-dev libsdl-ttf2.0-dev libfreeimage-dev gperf bison flex libgmp-dev libmpfr-dev libmpc-dev libc6-dev-i386 lib32z1-dev
+
+Run 'ssh-keygen', if ~/.ssh/id_rsa doesn't exist.
+Add id_rsa.pub to ~/.ssh/authorized_keys on relevant servers, so the scripts can login automatically later.
+
+Now you can start the Jenkins slave. The web interface will tell you how.
+
+To also be able to compile JavaME runtimes:
+sudo apt-get install tofrodos rubygems ruby-sqlite3 default-jdk
+
+Install JavaME SDK:
+Go to http://www.oracle.com/technetwork/java/javasebusiness/downloads/java-archive-downloads-javame-419430.html
+Download, chmod +x and run sun_java_wireless_toolkit-2.5.2_01-linuxi486.bin.sh.
+
+Install ProGuard:
+Go to http://proguard.sourceforge.net/#downloads.html
+Download proguard.zip. Latest version is recommended, 4.7 and 4.8 are tested.
+Copy proguard.jar to the WTK bin directory (default ~/WTK2.5.2/bin/)
+
+The first build will fail. Edit MoSync-source/tools/RuntimeBuilder/Settings.rb.
+
+
+13:40 2012-10-31
+Windows slave:
+Starting with Windows 7, 64-bit:
+ May work with 32-bit, xp and 8.
+
+Create a directory for installing gnuwin32 programs.
+Add its /bin/ subdirectory to the PATH environment variable.
+Make sure environment variables LANG=EN and LANGUAGE=EN are set.
+ They are not set by default; create them if they don't exist.
+
+Install therein:
+ * wget - http://gnuwin32.sourceforge.net/packages/wget.htm
+ * zip - http://gnuwin32.sourceforge.net/packages/zip.htm
+ * unzip - http://gnuwin32.sourceforge.net/packages/unzip.htm
+ * sed - http://gnuwin32.sourceforge.net/packages/sed.htm
+ * gperf - http://gnuwin32.sourceforge.net/packages/gperf.htm
+
+Install these programs:
+ * Ruby 1.9 - http://rubyinstaller.org/downloads/
+ * mingw - http://sourceforge.net/projects/mingw/files/latest/download?source=files
+  * Choose to install C compiler, C++ compiler, MSYS Basic System and MinGW Developer Toolkit.
+ * Git - http://git-scm.com/download/win
+ * Java - http://www.oracle.com/technetwork/java/javase/downloads/index.html
+  * Tested version: JDK 7u9, 64-bit.
+
+Add MinGW/bin and MinGW/msys/1.0/bin to system-wide PATH.
+
+* If you build GCC manually, make sure MinGW/msys/1.0/bin is first in PATH,
+  otherwise GCC's configure will fail with weird SED errors and gcc's make will fail with a 'sort' error.
+
+Download dlfcn-win32: http://dlfcn-win32.googlecode.com/files/dlfcn-win32-r19.tar.bz2
+Compile and install it into mingw. (Binutils needs it.)
+ * Using mingw shell in /dlfcn-win32-r19/:
+  * ./configure
+	* make install
+
+mingw-get install libz msys-bison msys-flex mpfr mpc gmp
+
+Generate an SSH keypair. For example, you can use PuttyGen and its Export OpenSSH.
+Store id_rsa in C:\Users\<username>\.ssh\, so Git can use it.
+
+Start Jenkins slave.
+
+
+09:38 2012-11-06
+OSX slave, partial:
+Tested on 10.6, SHOULD work on 10.7, MAY work on 10.8.
+
+* Install macports.
+ * sudo port install gmp +universal
+ * sudo port install libmpc +universal
+ * sudo port install mpfr +universal
+ * sudo port install libiconv +universal
+ * sudo port install libsdl +universal
+ * sudo port install libsdl_image +universal
+ * sudo port install libsdl_ttf +universal
+ * sudo port install readline +universal
+ * sudo port install libsdl_sound +universal
+ * sudo port install expat +universal
+ * sudo port install glew +universal
+ * sudo port install libelf +universal
+
+Start Jenkins slave.

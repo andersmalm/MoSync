@@ -28,8 +28,10 @@ Software Foundation, 59 Temple Place - Suite 330, Boston, MA
 //#define CORE_DEBUGGING_MODE
 //#define SYSCALL_DEBUGGING_MODE
 
+#ifndef SYMBIAN
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
+#endif
 
 #include <math.h>
 
@@ -1187,7 +1189,11 @@ void WRITE_REG(int reg, int value) {
 
 #include "core_helpers.h"
 
+#ifdef SYMBIAN
+#define LOG_ARITH(a...)
+#else
 #define LOG_ARITH(...)
+#endif
 
 #define ARITH(a_reg, a, oper, b) LOG_ARITH("\t%i %s %i = ", (a), #oper, (b)); WRITE_REG(a_reg, (a) oper (b));\
 	LOG_ARITH("%i", (a));

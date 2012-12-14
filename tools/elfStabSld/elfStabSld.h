@@ -1,7 +1,12 @@
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 
+#ifdef DARWIN
+#define __LIBELF_INTERNAL__ 0
+#include <libelf/libelf.h>
+#else
 #include <elf.h>
+#endif
 #include "FileStream.h"
 #include <stdint.h>
 #include "helpers/array.h"

@@ -24,6 +24,7 @@ Software Foundation, 59 Temple Place - Suite 330, Boston, MA
 #include "MoSync.pan"
 #include "config_platform.h"
 
+#include <helpers/types.h>
 #include <helpers/helpers.h>
 #include <helpers/smartie.h>
 #include <helpers/cpp_defs.h>
@@ -214,8 +215,8 @@ inline void* memset(void* dst, int c, uint len) {
 }
 #endif
 
-int unixTime(const TTime& tt);
-TTime symbianTime(int unixTime);
+s64 unixTime(const TTime& tt);
+TTime symbianTime(s64 unixTime);
 
 // returns 0 on success.
 int _mkdir(const char* name);

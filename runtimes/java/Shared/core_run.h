@@ -28,7 +28,7 @@ final int EXEC_NAME() throws Exception {
 	int rd,rs;
 	int imm32;
 	int[] regs = mRegs;
-	double[] freg = mFregs;
+	DOUBLE[] freg = mFregs;
 	int[] mem_ds = mMem_ds;
 	byte[] mem_cs = mMem_cs;
 	int[] mem_cp = mMem_cp;
@@ -114,13 +114,13 @@ final int EXEC_NAME() throws Exception {
 			OPC(LDDR) FETCH_RD_RS WRITE_REG(rdlo, RSLO); WRITE_REG(rdhi, RSHI); EOP;
 			OPC(LDDI) FETCH_RD_CONST WRITE_REG(rdlo, IMM); FETCH_CONST; WRITE_REG(rdhi, IMM); EOP;
 
-			OPC(FLOATS) FETCH_FRD_RS FRD = (double)RS; EOP;
-			OPC(FLOATUNS) FETCH_FRD_RS FRD = (double)(((long)RS) & 0x0ffffffff); EOP;
+			OPC(FLOATS) FETCH_FRD_RS DASSIGN(FRD, RS); EOP;
+			OPC(FLOATUNS) FETCH_FRD_RS DASSIGN(FRD, (((long)RS) & 0x0ffffffff)); EOP;
 
 			OPC(FLOATD)
 			{
 				FETCH_FRD_RS;
-				FRD = (double)ints2long(RSLO, RSHI);
+				DASSIGN(FRD, ints2long(RSLO, RSHI));
 			} EOP;
 
 			OPC(FLOATUND)
@@ -128,45 +128,49 @@ final int EXEC_NAME() throws Exception {
 				FETCH_FRD_RS;
 				long l = ints2long(RSLO, RSHI);
 				if(l >= 0)
-					FRD = (double)l;
+					DASSIGN(FRD, l);
 				else	// This is how BigInteger.doubleValue() does it.
-					FRD = Double.parseDouble(unsignedLongToHexString(l));
+#ifdef MA_PROF_SUPPORT_CLDC_10
+				DASSIGN(FRD, unsignedLongToHexString(l));
+#else
+				FRD = Double.parseDouble(unsignedLongToHexString(l));
+#endif
 			} EOP;
 
 			OPC(FSTRS) {
 				FETCH_RD_FRS;
-				WRITE_REG(rd, Float.floatToIntBits((float)FRS));
+				WRITE_REG(rd, FTI(FRS));
 			} EOP;
 			OPC(FSTRD) {
 				FETCH_RD_FRS;
-				long l = Double.doubleToLongBits(FRS);
+				long l = DTL(FRS);
 				WRITE_REG(rdlo, (int)(l >> 32));
 				WRITE_REG(rdhi, (int)l);
 			} EOP;
 
-			OPC(FLDRS) FETCH_FRD_RS FRD = (double)Float.intBitsToFloat(RS); EOP;
-			OPC(FLDRD) FETCH_FRD_RS FRD = Double.longBitsToDouble(ints2long(RSLO, RSHI)); EOP;
+			OPC(FLDRS) FETCH_FRD_RS ITF(FRD, RS); EOP;
+			OPC(FLDRD) FETCH_FRD_RS LTD(FRD, ints2long(RSLO, RSHI)); EOP;
 
-			OPC(FLDR) FETCH_FRD_FRS FRD = FRS; EOP;
+			OPC(FLDR) FETCH_FRD_FRS DASSIGN(FRD, FRS); EOP;
 
-			OPC(FLDIS) FETCH_FRD_CONST FRD = (double)Float.intBitsToFloat(IMM); EOP;
-			OPC(FLDID) FETCH_FRD_CONST { int imm = IMM; FETCH_CONST; FRD = Double.longBitsToDouble(ints2long(IMM, imm)); } EOP;
+			OPC(FLDIS) FETCH_FRD_CONST ITF(FRD, IMM); EOP;
+			OPC(FLDID) FETCH_FRD_CONST { int imm = IMM; FETCH_CONST; LTD(FRD, ints2long(IMM, imm)); } EOP;
 
-			OPC(FIX_TRUNCS) FETCH_RD_FRS WRITE_REG(rd, (int)FRS); EOP;
+			OPC(FIX_TRUNCS) FETCH_RD_FRS WRITE_REG(rd, TO_INTEGER(FRS)); EOP;
 			OPC(FIX_TRUNCD)
 			{
 				FETCH_RD_FRS;
-				long l = (long)FRS;
+				long l = TO_LONG(FRS);
 				WRITE_REG(rdlo, (int)(l >> 32));
 				WRITE_REG(rdhi, (int)l);
 			} EOP;
 
 			// identical to FIX_*. todo: remove these two opcodes.
-			OPC(FIXUN_TRUNCS) FETCH_RD_FRS WRITE_REG(rd, (int)FRS); EOP;
+			OPC(FIXUN_TRUNCS) FETCH_RD_FRS WRITE_REG(rd, TO_INTEGER(FRS)); EOP;
 			OPC(FIXUN_TRUNCD)
 			{
 				FETCH_RD_FRS;
-				long l = (long)FRS;
+				long l = TO_LONG(FRS);
 				WRITE_REG(rdlo, (int)(l >> 32));
 				WRITE_REG(rdhi, (int)l);
 			} EOP;
@@ -174,14 +178,14 @@ final int EXEC_NAME() throws Exception {
 			OPC(FSTS)
 			{
 				FETCH_RD_FRS_CONST
-				WINT(RD + IMM, Float.floatToIntBits((float)FRS));
+				WINT(RD + IMM, FTI(FRS));
 			} EOP;
 
 			OPC(FSTD)
 			{
 				FETCH_RD_FRS_CONST
 				int addr = RD + IMM;
-				long l = Double.doubleToLongBits(FRS);
+				long l = DTL(FRS);
 				WINT(addrlo, (int)(l >> 32));
 				WINT(addrhi, (int)l);
 			} EOP;
@@ -189,39 +193,39 @@ final int EXEC_NAME() throws Exception {
 			OPC(FLDS)
 			{
 				FETCH_RD_RS_CONST
-				FRD = (double)Float.intBitsToFloat(RINT(RS + IMM));
+				ITF(FRD, RINT(RS + IMM));
 			} EOP;
 
 			OPC(FLDD)
 			{
 				FETCH_RD_RS_CONST
 				int addr = RS + IMM;
-				FRD = Double.longBitsToDouble(ints2long(RINT(addrlo), RINT(addrhi)));
+				LTD(FRD, ints2long(RINT(addrlo), RINT(addrhi)));
 			} EOP;
 
-			OPC(FADD) FETCH_FRD_FRS FRD += FRS; EOP;
-			OPC(FSUB) FETCH_FRD_FRS FRD -= FRS; EOP;
-			OPC(FMUL) FETCH_FRD_FRS FRD *= FRS; EOP;
+			OPC(FADD) FETCH_FRD_FRS FADD(FRD, FRS); EOP;
+			OPC(FSUB) FETCH_FRD_FRS FSUB(FRD, FRS); EOP;
+			OPC(FMUL) FETCH_FRD_FRS FMUL(FRD, FRS); EOP;
 			OPC(FDIV)
 			{
 				FETCH_FRD_FRS;
 	#ifndef ALLOW_FLOAT_DIVISION_BY_ZERO
-				if(FRS == 0.0)
+				if(EQUAL_TO(FRS, DZERO))
 				{
 					throw new Exception("Float division by zero!");
 				}
 	#endif	//ALLOW_FLOAT_DIVISION_BY_ZERO
-				FRD /= FRS;
+				FDIV(FRD, FRS);
 			}
 			EOP;
 
-			OPC(FSQRT) FETCH_FRD_FRS FRD = Math.sqrt(FRS); EOP;
-			OPC(FSIN) FETCH_FRD_FRS FRD = Math.sin(FRS); EOP;
-			OPC(FCOS) FETCH_FRD_FRS FRD = Math.cos(FRS); EOP;
-			OPC(FEXP) FETCH_FRD_FRS FRD = Float11.exp(FRS); EOP;
-			OPC(FLOG) FETCH_FRD_FRS FRD = Float11.log(FRS); EOP;
-			OPC(FPOW) FETCH_FRD_FRS FRD = Float11.pow(FRD, FRS); EOP;
-			OPC(FATAN2) FETCH_FRD_FRS FRD = Float11.atan2(FRD, FRS); EOP;
+			OPC(FSQRT) FETCH_FRD_FRS FSQRT(FRD, FRS); EOP;
+			OPC(FSIN) FETCH_FRD_FRS FSIN(FRD, FRS); EOP;
+			OPC(FCOS) FETCH_FRD_FRS FCOS(FRD, FRS); EOP;
+			OPC(FEXP) FETCH_FRD_FRS FEXP(FRD, FRS); EOP;
+			OPC(FLOG) FETCH_FRD_FRS FLOG(FRD, FRS); EOP;
+			OPC(FPOW) FETCH_FRD_FRS FPOW(FRD, FRS); EOP;
+			OPC(FATAN2) FETCH_FRD_FRS FATAN2(FRD, FRS); EOP;
 
 			OPC(LDD)
 			{

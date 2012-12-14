@@ -115,15 +115,19 @@ elsif(HOST == :linux)
 	if(HOST_PLATFORM == :darwin)
 		sdkNumber = (File.exist?("/Developer/SDKs/MacOSX10.5.sdk")) ? "5":"6"
 		sdkAdress = "/Developer/SDKs/MacOSX10.#{sdkNumber}.sdk"
-		@HOST_FLAGS += " -isysroot #{sdkAdress} -mmacosx-version-min=10.5 -m32 -DDARWIN"
+		@HOST_FLAGS += " -isysroot #{sdkAdress} -mmacosx-version-min=10.5 -DDARWIN"
 	end
 	@HOST_CPPFLAGS = ""
 elsif(HOST == :darwin)
-	sdkAdress = "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.7.sdk"
-	if(!File.exist?(sdkAdress))
-		sdkNumber = (File.exist?("/Developer/SDKs/MacOSX10.5.sdk")) ? "5":"6"
-		sdkAdress = "/Developer/SDKs/MacOSX10.#{sdkNumber}.sdk"
-	end
+# fix for OS X 10.8 Mountain Lion
+#	sdkAdress = "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.7.sdk"
+#	if(!File.exist?(sdkAdress))
+#		sdkNumber = (File.exist?("/Developer/SDKs/MacOSX10.5.sdk")) ? "5":"6"
+#		sdkAdress = "/Developer/SDKs/MacOSX10.#{sdkNumber}.sdk"
+#	end
+	sdkNumber = (File.exist?("/Developer/SDKs/MacOSX10.5.sdk")) ? "5":"6"
+	sdkAdress = "/Developer/SDKs/MacOSX10.#{sdkNumber}.sdk"
+
 	@HOST_FLAGS = " -isysroot #{sdkAdress} -mmacosx-version-min=10.5 -DDARWIN"
 	@HOST_CPPFLAGS = " -isysroot #{sdkAdress} -mmacosx-version-min=10.5 -fPIC"
 else

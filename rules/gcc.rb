@@ -239,6 +239,7 @@ class GccWork < BuildWork
 		files += @EXTRA_SOURCEFILES.select do |file| check_extra_sourcefile(file, ending) end
 		tasks = files.collect do |file| FileTask.new(self, file) end
 		extra_tasks = @EXTRA_SOURCETASKS.select do |file| file.to_s.getExt == ending end
+		# todo: make sure all sourcetasks are collected by one of the calls to this function.
 		return extra_tasks + tasks
 	end
 

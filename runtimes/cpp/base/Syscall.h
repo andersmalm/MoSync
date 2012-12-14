@@ -130,7 +130,7 @@ namespace Base {
 		int maFileSize(MAHandle file);
 		int maFileAvailableSpace(MAHandle file);
 		int maFileTotalSpace(MAHandle file);
-		int maFileDate(MAHandle file);
+		s64 maFileDate(MAHandle file);
 		int maFileRename(MAHandle file, const char* newName);
 		int maFileTruncate(MAHandle file, int offset);
 

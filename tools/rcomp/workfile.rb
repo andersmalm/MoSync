@@ -19,6 +19,11 @@ rcomp.instance_eval do
 	#@LIBRARIES = ['z']
 	@NAME = 'rcomp'
 	@INSTALLDIR = mosyncdir + '/bin'
+	def setup
+		set_defaults
+		@SPECIFIC_CFLAGS['rcomp.cpp'] << ' -Wno-delete-non-virtual-dtor' if(@GCC_V4_SUB >= 7)
+		super
+	end
 end
 
 rcomp.invoke

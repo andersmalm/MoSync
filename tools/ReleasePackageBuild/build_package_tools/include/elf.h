@@ -43,9 +43,9 @@ typedef signed int __int64;
 
 /* Types for signed and unsigned 64-bit quantities.  */
 typedef uint64_t Elf32_Xword;
-typedef	__int64 Elf32_Sxword;
+typedef	int64_t Elf32_Sxword;
 typedef uint64_t Elf64_Xword;
-typedef	__int64 Elf64_Sxword;
+typedef	int64_t Elf64_Sxword;
 
 /* Type of addresses.  */
 typedef uint32_t Elf32_Addr;

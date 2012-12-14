@@ -38,10 +38,12 @@ JAVAME_SOURCES = [
 	#'ExtensionHandler',
 	#'AudioBufferDataSource',
 	'SplitResourceStream',
-	'Float11',
 ]
 CLDC10_SOURCES = [
 	'Real',
+]
+CLDC11_SOURCES = [
+	'Float11',
 ]
 
 def escape(fn)
@@ -136,7 +138,9 @@ work.instance_eval do
 		default_const(:PLATFORM, 'cldc11')
 		if(PLATFORM == 'cldc10')
 			javaFiles += CLDC10_SOURCES.collect { |n| JavaPreprocessTask.new(self, 'src', n) }
-		elsif(PLATFORM != 'cldc11')
+		elsif(PLATFORM == 'cldc11')
+			javaFiles += CLDC11_SOURCES.collect { |n| JavaPreprocessTask.new(self, 'src', n) }
+		else
 			error("Unsupported platform: #{PLATFORM}")
 		end
 

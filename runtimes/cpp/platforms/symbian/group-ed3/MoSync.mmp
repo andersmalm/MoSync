@@ -26,12 +26,13 @@ TARGETPATH	\private\10003a3f\import\apps
 #endif	//WINSCW
 END //RESOURCE
 
-#include "..\MoSync-base.mmp"
-
 SOURCEPATH ..\src
+SOURCE float2.cpp
 SOURCE RSendAs_SMS.cpp
 SOURCE Client.cpp
 SOURCE pimV3.cpp
+
+#include "..\MoSync-base.mmp"
 
 SOURCEPATH ..\..\..\base
 SOURCE pim.cpp

@@ -458,6 +458,7 @@ static void streamStruct(ostream& stream, const Struct& s, const string& name,
 			"\t__attribute((packed,aligned(4)))\n"
 			"#elif defined(_MSC_VER)\n"
 			"#pragma pack(push, 4)\n"
+			"#elif defined(SYMBIAN)\n"
 			"#else\n"
 			"#error Unsupported compiler!\n"
 			"#endif\n"
@@ -992,7 +993,7 @@ void streamInvokeSyscall(ostream& stream, const Interface& maapi, bool java, int
 				convType = a.type;
 			}
 
-			bool isFloat = (argType == "double" || argType == "float");
+			bool isFloat = (a.type == "double" || a.type == "float");
 
 			int sizeOfArgType = 1;
 			if(argType == "double" || argType == "long")
